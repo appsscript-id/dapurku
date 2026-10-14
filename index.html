@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script>try{var __t=localStorage.getItem("dk_theme");if(__t)document.documentElement.setAttribute("data-theme",__t)}catch(e){}</script>
+<script>try{var d=document.documentElement,t=localStorage.getItem("dk_theme"),f=localStorage.getItem("dk_fs"),n=localStorage.getItem("dk_dense");if(t)d.setAttribute("data-theme",t);if(f)d.style.setProperty("--s",f);d.setAttribute("data-dense",n==="1"?"1":"0")}catch(e){}</script>
 <meta name="theme-color" content="#0F7B5F">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -11,11 +11,12 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230F7B5F'/%3E%3Cpath d='M18 36h28a14 14 0 0 1-28 0z' fill='white'/%3E%3Cpath d='M24 30c0-5 4-5 4-9M34 30c0-5 4-5 4-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=Lora:wght@600;700&display=swap" rel="stylesheet">
 <style>
 /* ======================= TOKEN ======================= */
 :root{
   color-scheme: light;
+  --s:1; /* skala ukuran huruf */
   --bg:#F5F7F6;
   --surface:#FFFFFF;
   --ink:#16221D;
@@ -42,14 +43,15 @@
   --font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:calc(15px*var(--s));line-height:1.45;-webkit-text-size-adjust:100%}
 body{min-height:100vh;min-height:100dvh}
 button,input,select,textarea{font:inherit;color:inherit}
 h1,h2,h3,p{margin:0}
-h1{font-size:24px;font-weight:800;letter-spacing:-.02em}
-h2{font-size:17px;font-weight:700;letter-spacing:-.01em}
-h3{font-size:15px;font-weight:700}
-.muted{color:var(--muted)} .small{font-size:12.5px}
+h1{font-size:calc(24px*var(--s));font-weight:800;letter-spacing:-.025em}
+h2{font-size:calc(17px*var(--s));font-weight:700;letter-spacing:-.01em}
+h3{font-size:calc(15px*var(--s));font-weight:700}
+h1,h2,h3{font-family:var(--font-h,var(--font))}
+.muted{color:var(--muted)} .small{font-size:calc(12.5px*var(--s))}
 .num{font-variant-numeric:tabular-nums}
 [hidden]{display:none !important}
 :focus-visible{outline:3px solid color-mix(in srgb,var(--brand) 38%,transparent);outline-offset:2px}
@@ -58,7 +60,7 @@ h3{font-size:15px;font-weight:700}
 .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
   padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:var(--top-bg);
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.02em}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:calc(17px*var(--s));letter-spacing:-.02em}
 .logo{width:34px;height:34px;border-radius:10px;background:var(--brand);display:grid;place-items:center}
 .logo svg{width:20px;height:20px;stroke:var(--on-brand);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .top-actions{display:flex;gap:4px}
@@ -67,7 +69,7 @@ h3{font-size:15px;font-weight:700}
 .bnav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(7,1fr);
   background:var(--surface);border-top:1px solid var(--line);padding:6px 2px calc(6px + env(safe-area-inset-bottom,0px))}
 .bnav button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;padding:6px 0;
-  font-size:10px;font-weight:600;color:var(--muted);border-radius:10px;cursor:pointer;min-width:0}
+  font-size:calc(10px*var(--s));font-weight:600;color:var(--muted);border-radius:10px;cursor:pointer;min-width:0}
 .bnav button svg{width:22px;height:22px}
 .bnav button.on{color:var(--brand)}
 .bnav button.on svg{stroke-width:2.4}
@@ -97,34 +99,35 @@ svg.i{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-l
 .btn.primary{background:var(--brand);color:var(--on-brand)} .btn.primary:hover{background:var(--brand-d)}
 .btn.ghost{background:var(--surface);color:var(--ink);border-color:var(--line)} .btn.ghost:hover{background:var(--line-2)}
 .btn.danger{background:var(--red-50);color:var(--red)}
-.btn.sm{padding:7px 12px;min-height:36px;font-size:13.5px;border-radius:10px}
+.btn.sm{padding:7px 12px;min-height:36px;font-size:calc(13.5px*var(--s));border-radius:10px}
 .btn.block{width:100%}
 .btn[disabled]{opacity:.55;pointer-events:none}
 .icon-btn{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:12px;background:transparent;color:var(--ink-2);cursor:pointer}
 .icon-btn:hover{background:var(--line-2)}
 .icon-btn.danger{color:var(--red)}
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
-.field>label{font-size:13px;font-weight:600;color:var(--ink-2)}
-.input,.select,textarea.input{width:100%;border:1.5px solid var(--line);background:var(--surface);border-radius:var(--r-md);padding:11px 12px;font-size:16px;min-height:46px;color:var(--ink);-webkit-appearance:none;appearance:none}
+.field>label{font-size:calc(13px*var(--s));font-weight:600;color:var(--ink-2)}
+.input,.select,textarea.input{width:100%;border:1.5px solid var(--line);background:var(--surface);border-radius:var(--r-md);padding:11px 12px;font-size:max(16px,calc(16px*var(--s)));min-height:46px;color:var(--ink);-webkit-appearance:none;appearance:none}
 .select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2376837C' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
 .input:focus,.select:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 15%,transparent)}
 textarea.input{min-height:70px;resize:vertical}
-.hint{font-size:12.5px;color:var(--muted)}
+.hint{font-size:calc(12.5px*var(--s));color:var(--muted)}
 .two{display:grid;grid-template-columns:1fr;gap:0 14px}
 @media(min-width:640px){.two{grid-template-columns:1fr 1fr}}
 .seg{display:inline-flex;background:var(--line-2);border-radius:12px;padding:4px;gap:2px;max-width:100%;overflow:auto}
 .seg button{border:0;background:none;padding:8px 14px;border-radius:9px;font-weight:700;color:var(--ink-2);cursor:pointer;white-space:nowrap}
 .seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(22,34,29,.12)}
+.seg.sm button{padding:7px 18px}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:none;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-weight:600;color:var(--ink-2);cursor:pointer;font-size:13.5px}
+.chip{flex:none;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-weight:600;color:var(--ink-2);cursor:pointer;font-size:calc(13.5px*var(--s))}
 .chip.on{background:var(--inv-bg);border-color:var(--inv-bg);color:var(--inv-fg)}
-.badge{display:inline-flex;align-items:center;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;background:var(--line-2);color:var(--ink-2)}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:2px 10px;font-size:calc(12px*var(--s));font-weight:700;background:var(--line-2);color:var(--ink-2)}
 .badge.ok{background:var(--brand-50);color:var(--brand-d)}
 .badge.warn{background:var(--amber-50);color:var(--amber)}
 .badge.bad{background:var(--red-50);color:var(--red)}
 .empty{text-align:center;padding:34px 16px;color:var(--muted)}
-.empty strong{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+.empty strong{display:block;color:var(--ink);font-size:calc(16px*var(--s));margin-bottom:4px}
 .empty .btn{margin-top:14px}
 .skel{height:84px;border-radius:var(--r-lg);background:linear-gradient(90deg,var(--line) 25%,var(--line-2) 50%,var(--line) 75%);background-size:200% 100%;animation:sk 1.2s infinite;margin-bottom:12px}
 @keyframes sk{to{background-position:-200% 0}}
@@ -136,7 +139,7 @@ textarea.input{min-height:70px;resize:vertical}
 #toasts{position:fixed;left:0;right:0;bottom:calc(86px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:8px;z-index:120;pointer-events:none;padding:0 16px}
 @media(min-width:900px){#toasts{bottom:28px}}
 .toast{background:var(--inv-bg);color:var(--inv-fg);padding:11px 16px;border-radius:12px;font-weight:600;box-shadow:0 8px 24px rgba(22,34,29,.25);animation:tin .2s ease-out;max-width:420px}
-.toast.err{background:var(--red)}
+.toast.err{background:var(--red);color:#fff}
 @keyframes tin{from{transform:translateY(8px);opacity:0}}
 
 /* modal */
@@ -153,12 +156,12 @@ textarea.input{min-height:70px;resize:vertical}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(min-width:900px){.stats{grid-template-columns:repeat(4,1fr)}}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px}
-.stat .l{font-size:13px;color:var(--muted);font-weight:600}
-.stat .v{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:4px;overflow-wrap:anywhere}
-.stat .s{font-size:12.5px;color:var(--muted);margin-top:2px}
+.stat .l{font-size:calc(13px*var(--s));color:var(--muted);font-weight:600}
+.stat .v{font-size:calc(20px*var(--s));font-weight:800;letter-spacing:-.02em;margin-top:4px;overflow-wrap:anywhere}
+.stat .s{font-size:calc(12.5px*var(--s));color:var(--muted);margin-top:2px}
 .stat.hero{background:linear-gradient(135deg,var(--brand),var(--brand-d));border-color:transparent;color:var(--on-brand);grid-column:1/-1}
 .stat.hero .l,.stat.hero .s{color:color-mix(in srgb,var(--on-brand) 80%,transparent)}
-.stat.hero .v{font-size:32px}
+.stat.hero .v{font-size:calc(32px*var(--s))}
 @media(min-width:900px){.stat.hero{grid-column:span 2}}
 .dgrid{display:grid;gap:16px;margin-top:16px}
 @media(min-width:900px){.dgrid{grid-template-columns:3fr 2fr}}
@@ -166,8 +169,8 @@ textarea.input{min-height:70px;resize:vertical}
 .bcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;min-width:0}
 .bcol .b{width:100%;max-width:44px;border-radius:8px 8px 3px 3px;background:var(--brand-50);min-height:4px;position:relative}
 .bcol.today .b{background:var(--brand)}
-.bcol .bv{font-size:10.5px;font-weight:700;color:var(--ink-2);white-space:nowrap}
-.bcol .bl{font-size:12px;color:var(--muted);font-weight:600}
+.bcol .bv{font-size:calc(10.5px*var(--s));font-weight:700;color:var(--ink-2);white-space:nowrap}
+.bcol .bl{font-size:calc(12px*var(--s));color:var(--muted);font-weight:600}
 .lrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line-2)}
 .lrow:last-child{border-bottom:0}
 .lrow .t{font-weight:600;min-width:0;overflow-wrap:anywhere}
@@ -182,8 +185,8 @@ textarea.input{min-height:70px;resize:vertical}
 .pcard.sel{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 14%,transparent)}
 .pcard.out{opacity:.55}
 .pname{font-weight:700;line-height:1.25}
-.pcat{font-size:12.5px;color:var(--muted)}
-.pprice{font-weight:800;font-size:16px;margin-top:8px;letter-spacing:-.01em}
+.pcat{font-size:calc(12.5px*var(--s));color:var(--muted)}
+.pprice{font-weight:800;font-size:calc(16px*var(--s));margin-top:8px;letter-spacing:-.01em}
 .pfoot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:6px;min-height:38px}
 .step{display:flex;align-items:center;gap:2px}
 .step button{width:38px;height:38px;border-radius:11px;border:0;background:var(--brand);color:var(--on-brand);cursor:pointer;display:grid;place-items:center}
@@ -192,11 +195,11 @@ textarea.input{min-height:70px;resize:vertical}
 .cartbar{position:sticky;bottom:calc(78px + env(safe-area-inset-bottom,0px));margin-top:18px;background:var(--inv-bg);color:var(--inv-fg);border-radius:20px;
   padding:12px 12px 12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 14px 34px rgba(22,34,29,.28)}
 @media(min-width:900px){.cartbar{bottom:20px}}
-.cartbar .n{font-size:12.5px;color:color-mix(in srgb,var(--inv-fg) 70%,transparent);font-weight:600}
-.cartbar .t{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.cartbar .n{font-size:calc(12.5px*var(--s));color:color-mix(in srgb,var(--inv-fg) 70%,transparent);font-weight:600}
+.cartbar .t{font-size:calc(21px*var(--s));font-weight:800;letter-spacing:-.02em}
 .cartbar .btn{background:var(--gold);color:#1d1600}
 .sum-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0}
-.sum-row.big{font-size:19px;font-weight:800;border-top:1.5px dashed var(--line);margin-top:6px;padding-top:14px}
+.sum-row.big{font-size:calc(19px*var(--s));font-weight:800;border-top:1.5px dashed var(--line);margin-top:6px;padding-top:14px}
 .methods{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .methods button{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 6px;font-weight:700;cursor:pointer}
 .methods button.on{border-color:var(--brand);background:var(--brand-50);color:var(--brand-d)}
@@ -208,8 +211,8 @@ textarea.input{min-height:70px;resize:vertical}
 .irow .hint,.irow .isub{grid-column:1/-1}
 .irow .isub{font-weight:800;text-align:right}
 .sumbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:6px;padding-top:16px;border-top:1.5px dashed var(--line)}
-.sumbar .lbl{font-size:13px;color:var(--muted);font-weight:600}
-.sumbar strong{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.sumbar .lbl{font-size:calc(13px*var(--s));color:var(--muted);font-weight:600}
+.sumbar strong{display:block;font-size:calc(24px*var(--s));font-weight:800;letter-spacing:-.02em}
 .sumbar .btn{flex:1;min-width:180px}
 @media(min-width:640px){.sumbar .btn{flex:none}}
 
@@ -219,19 +222,19 @@ textarea.input{min-height:70px;resize:vertical}
 .mcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 14px 14px 16px;display:flex;align-items:center;gap:12px}
 .mcard .body{flex:1;min-width:0}
 .mcard .nm{font-weight:700;overflow-wrap:anywhere}
-.mcard .meta{font-size:13px;color:var(--muted);margin-top:2px}
+.mcard .meta{font-size:calc(13px*var(--s));color:var(--muted);margin-top:2px}
 .mcard .acts{display:flex}
 details.tx{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:10px;overflow:hidden}
 details.tx summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px}
 details.tx summary::-webkit-details-marker{display:none}
 details.tx .who{font-weight:700;overflow-wrap:anywhere}
-details.tx .when{font-size:12.5px;color:var(--muted)}
+details.tx .when{font-size:calc(12.5px*var(--s));color:var(--muted)}
 details.tx .amt{font-weight:800;text-align:right;flex:none}
 details.tx .det{padding:0 16px 14px;border-top:1px solid var(--line-2)}
-.det table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+.det table{width:100%;border-collapse:collapse;margin-top:8px;font-size:calc(14px*var(--s))}
 .det td{padding:6px 0;vertical-align:top}
 .det td:last-child{text-align:right;font-weight:600;white-space:nowrap}
-.det .note{font-size:13px;color:var(--muted);margin-top:8px}
+.det .note{font-size:calc(13px*var(--s));color:var(--muted);margin-top:8px}
 .range{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
 
 .acts-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
@@ -239,7 +242,7 @@ details.tx .det{padding:0 16px 14px;border-top:1px solid var(--line-2)}
 .piutang{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;cursor:pointer;
   background:var(--amber-50);border:1px solid var(--amber-line);border-radius:var(--r-lg);padding:14px 16px;margin-top:12px;color:var(--ink)}
 .piutang b{display:block}
-.piutang span.s{font-size:13px;color:var(--amber)}
+.piutang span.s{font-size:calc(13px*var(--s));color:var(--amber)}
 .mcard .body[data-detail]{cursor:pointer}
 
 /* ======================= LOGIN ======================= */
@@ -249,7 +252,7 @@ details.tx .det{padding:0 16px 14px;border-top:1px solid var(--line-2)}
 .login .logo svg{width:32px;height:32px}
 .login h1{margin-bottom:6px}
 .login p.muted{margin-bottom:22px}
-.err-t{color:var(--red);font-weight:600;font-size:13.5px;margin-bottom:12px}
+.err-t{color:var(--red);font-weight:600;font-size:calc(13.5px*var(--s));margin-bottom:12px}
 
 /* ======================= POLES TAMPILAN ======================= */
 .panel,.stat,.pcard,.mcard,details.tx{box-shadow:var(--shadow)}
@@ -257,12 +260,11 @@ details.tx .det{padding:0 16px 14px;border-top:1px solid var(--line-2)}
 .side button.nav{position:relative;transition:background .15s,color .15s}
 .side button.nav.on::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:4px;border-radius:0 4px 4px 0;background:var(--brand)}
 .bnav{box-shadow:0 -6px 20px rgba(16,24,20,.05)}
-h1{letter-spacing:-.025em}
 .btn.primary{box-shadow:0 4px 12px color-mix(in srgb,var(--brand) 26%,transparent)}
 .btn.primary:hover{box-shadow:0 6px 16px color-mix(in srgb,var(--brand) 32%,transparent)}
 .ov{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 
-/* pemilih tema */
+/* pengaturan */
 .themes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .theme{position:relative;border:2px solid var(--line);background:var(--surface);border-radius:var(--r-md);padding:10px;cursor:pointer;text-align:left;color:var(--ink)}
 .theme:hover{border-color:var(--muted)}
@@ -270,31 +272,113 @@ h1{letter-spacing:-.025em}
 .theme .sw{display:flex;height:38px;border-radius:9px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(128,128,128,.25)}
 .theme .sw i{flex:1}
 .theme .sw i:nth-child(3){flex:.8}
-.theme b{display:block;font-size:13.5px}
-.theme small{color:var(--muted);font-size:11.5px}
+.theme b{display:block;font-size:calc(13.5px*var(--s))}
+.theme small{color:var(--muted);font-size:calc(11.5px*var(--s))}
 .theme .ck{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:var(--brand);color:var(--on-brand);display:none;place-items:center}
 .theme.on .ck{display:grid}
 .theme .ck svg{width:12px;height:12px;stroke-width:3}
+.set-sec{margin:22px 0 8px}
+.set-sec:first-of-type{margin-top:0}
+.seg.wide{display:flex;width:100%}
+.seg.wide button{flex:1;padding:9px 6px}
+.fs-demo{margin-top:10px;padding:10px 12px;border:1.5px dashed var(--line);border-radius:var(--r-md);color:var(--ink-2)}
 
-/* ======================= TEMA ======================= */
-[data-theme="biru"]{--bg:#F3F6FA;--ink:#14202E;--ink-2:#425266;--muted:#738397;--line:#DEE6EF;--line-2:#ECF1F7;--brand:#1D5FBF;--brand-d:#144A99;--brand-50:#E5EEFB}
-[data-theme="indigo"]{--bg:#F5F5FB;--ink:#1B1A33;--ink-2:#4A4966;--muted:#7B7A95;--line:#E3E2F1;--line-2:#EFEFF8;--brand:#4F46E5;--brand-d:#3D35C4;--brand-50:#EBEAFD;--r-lg:20px;--r-md:14px}
-[data-theme="ungu"]{--bg:#F8F5FC;--ink:#261A33;--ink-2:#51445F;--muted:#82758F;--line:#E9E1F1;--line-2:#F3EEF8;--brand:#7C3AED;--brand-d:#6226C9;--brand-50:#F0E8FD}
-[data-theme="marun"]{--bg:#FAF5F4;--ink:#2A1A18;--ink-2:#5A4642;--muted:#8A7773;--line:#EDE0DD;--line-2:#F5ECEA;--brand:#A32A2A;--brand-d:#7F1F1F;--brand-50:#F9E6E4}
-[data-theme="oranye"]{--bg:#FBF7F3;--ink:#2B1D12;--ink-2:#5B4838;--muted:#8C7968;--line:#EEE2D6;--line-2:#F6EEE5;--brand:#C2410C;--brand-d:#9A3309;--brand-50:#FDEBDD}
-[data-theme="teal"]{--bg:#F2F8F9;--ink:#12262B;--ink-2:#3F5A61;--muted:#6F8A91;--line:#DAE8EB;--line-2:#E9F2F4;--brand:#0E7490;--brand-d:#0A5A71;--brand-50:#DFF1F6}
-[data-theme="slate"]{--bg:#F4F5F7;--ink:#111827;--ink-2:#374151;--muted:#6B7280;--line:#E1E4E8;--line-2:#EEF0F3;--brand:#334155;--brand-d:#1E293B;--brand-50:#E8ECF2;--r-lg:10px;--r-md:8px}
-[data-theme="gelap-hijau"],[data-theme="gelap-biru"]{color-scheme:dark;--red:#FF7A6E;--red-50:#3A1916;--amber-50:#33290F;--amber:#F2C14E;--amber-line:#5A4714;--shadow:0 1px 2px rgba(0,0,0,.35),0 8px 22px rgba(0,0,0,.25)}
+/* ======================= 10 TEMPLATE ======================= */
+/* 1. Zamrud = bawaan (tanpa override) */
+/* 2. Biru Korporat: tegas, sudut kecil, huruf Inter */
+[data-theme="biru"]{--bg:#F3F6FA;--ink:#14202E;--ink-2:#425266;--muted:#738397;--line:#DEE6EF;--line-2:#ECF1F7;--brand:#1D5FBF;--brand-d:#144A99;--brand-50:#E5EEFB;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--r-lg:12px;--r-md:8px;--r-sm:6px;
+  --shadow:0 1px 2px rgba(20,32,46,.06)}
+/* 3. Indigo Modern: bulat besar, huruf Manrope */
+[data-theme="indigo"]{--bg:#F5F5FB;--ink:#1B1A33;--ink-2:#4A4966;--muted:#7B7A95;--line:#E3E2F1;--line-2:#EFEFF8;--brand:#4F46E5;--brand-d:#3D35C4;--brand-50:#EBEAFD;
+  --font:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--r-lg:22px;--r-md:14px;--r-sm:10px;
+  --shadow:0 2px 4px rgba(79,70,229,.05),0 10px 26px rgba(79,70,229,.08)}
+/* 4. Ungu Royal: elegan, huruf Poppins */
+[data-theme="ungu"]{--bg:#F8F5FC;--ink:#261A33;--ink-2:#51445F;--muted:#82758F;--line:#E9E1F1;--line-2:#F3EEF8;--brand:#7C3AED;--brand-d:#6226C9;--brand-50:#F0E8FD;
+  --font:'Poppins',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--r-lg:20px;--r-md:14px;--r-sm:10px;
+  --shadow:0 2px 4px rgba(124,58,237,.05),0 10px 26px rgba(124,58,237,.09)}
+/* 5. Marun Klasik: judul serif, kesan restoran */
+[data-theme="marun"]{--bg:#FAF5F4;--ink:#2A1A18;--ink-2:#5A4642;--muted:#8A7773;--line:#EDE0DD;--line-2:#F5ECEA;--brand:#A32A2A;--brand-d:#7F1F1F;--brand-50:#F9E6E4;
+  --font-h:'Lora',Georgia,'Times New Roman',serif;--r-lg:14px;--r-md:10px;--r-sm:6px;
+  --shadow:0 1px 2px rgba(42,26,24,.06),0 6px 16px rgba(42,26,24,.05)}
+/* 6. Oranye Hangat: ramah dan membulat, huruf Nunito */
+[data-theme="oranye"]{--bg:#FBF7F3;--ink:#2B1D12;--ink-2:#5B4838;--muted:#8C7968;--line:#EEE2D6;--line-2:#F6EEE5;--brand:#C2410C;--brand-d:#9A3309;--brand-50:#FDEBDD;
+  --font:'Nunito',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--r-lg:26px;--r-md:18px;--r-sm:12px;
+  --shadow:0 2px 4px rgba(194,65,12,.05),0 10px 24px rgba(194,65,12,.08)}
+/* 7. Teal Segar: bersih, huruf Manrope */
+[data-theme="teal"]{--bg:#F2F8F9;--ink:#12262B;--ink-2:#3F5A61;--muted:#6F8A91;--line:#DAE8EB;--line-2:#E9F2F4;--brand:#0E7490;--brand-d:#0A5A71;--brand-50:#DFF1F6;
+  --font:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--r-lg:16px;--r-md:12px;--r-sm:8px}
+/* 8. Slate Netral: minimalis, tanpa bayangan, huruf sistem */
+[data-theme="slate"]{--bg:#F4F5F7;--ink:#111827;--ink-2:#374151;--muted:#6B7280;--line:#E1E4E8;--line-2:#EEF0F3;--brand:#334155;--brand-d:#1E293B;--brand-50:#E8ECF2;
+  --font:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;--r-lg:8px;--r-md:6px;--r-sm:4px;--shadow:none}
+/* 9 & 10. Mode gelap */
+[data-theme="gelap-hijau"],[data-theme="gelap-biru"]{color-scheme:dark;--red:#FF7A6E;--red-50:#3A1916;--amber-50:#33290F;--amber:#F2C14E;--amber-line:#5A4714;--shadow:0 1px 2px rgba(0,0,0,.35),0 8px 22px rgba(0,0,0,.25);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
 [data-theme="gelap-hijau"]{--bg:#0D1512;--surface:#151F1B;--ink:#E7F0EC;--ink-2:#B5C4BD;--muted:#82948B;--line:#25332D;--line-2:#1C2924;--brand:#2FBF8F;--brand-d:#5FD9AE;--brand-50:#12332A;--on-brand:#04140E;--inv-bg:#E7F0EC;--inv-fg:#0D1512}
-[data-theme="gelap-biru"]{--bg:#0B1220;--surface:#121B2E;--ink:#E6ECF8;--ink-2:#B2BED6;--muted:#7F8DA8;--line:#202C45;--line-2:#172138;--brand:#5B8DEF;--brand-d:#8FB1F7;--brand-50:#16284A;--on-brand:#06101F;--inv-bg:#E6ECF8;--inv-fg:#0B1220}
+[data-theme="gelap-biru"]{--bg:#0B1220;--surface:#121B2E;--ink:#E6ECF8;--ink-2:#B2BED6;--muted:#7F8DA8;--line:#202C45;--line-2:#172138;--brand:#5B8DEF;--brand-d:#8FB1F7;--brand-50:#16284A;--on-brand:#06101F;--inv-bg:#E6ECF8;--inv-fg:#0B1220;
+  --font:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;--r-lg:20px;--r-md:14px}
 [data-theme^="gelap"] .bnav{box-shadow:none}
 [data-theme^="gelap"] .login-card{box-shadow:0 24px 60px rgba(0,0,0,.45)}
+
+/* ======================= MODE PADAT ======================= */
+[data-dense="1"] .top{padding-top:calc(6px + env(safe-area-inset-top,0px));padding-bottom:6px}
+[data-dense="1"] .logo{width:30px;height:30px}
+[data-dense="1"] .main{padding:10px 10px calc(76px + env(safe-area-inset-bottom,0px))}
+@media(min-width:900px){[data-dense="1"] .main{padding:20px 24px 36px}}
+[data-dense="1"] .bnav{padding-top:3px}
+[data-dense="1"] .bnav button{padding:3px 0;gap:1px}
+[data-dense="1"] .bnav button svg{width:20px;height:20px}
+[data-dense="1"] .side button.nav{padding:8px 12px}
+[data-dense="1"] h1{font-size:calc(20px*var(--s))}
+[data-dense="1"] .ph{margin-bottom:10px}
+[data-dense="1"] .ph p{margin-top:2px}
+[data-dense="1"] .panel{padding:12px}
+[data-dense="1"] .panel+.panel,[data-dense="1"] .panel+h2,[data-dense="1"] .panel+.sec,[data-dense="1"] .dgrid{margin-top:10px}
+[data-dense="1"] .sec{margin-top:16px;margin-bottom:6px}
+[data-dense="1"] .btn{min-height:38px;padding:7px 12px}
+[data-dense="1"] .btn.sm{min-height:32px;padding:5px 10px}
+[data-dense="1"] .icon-btn{width:34px;height:34px}
+[data-dense="1"] .field{margin-bottom:9px;gap:4px}
+[data-dense="1"] .input,[data-dense="1"] .select,[data-dense="1"] textarea.input{min-height:38px;padding:7px 10px}
+[data-dense="1"] .search{margin-bottom:8px}
+[data-dense="1"] .search .input{padding-left:38px}
+[data-dense="1"] .seg button{padding:6px 11px}
+[data-dense="1"] .chips{padding-bottom:8px;gap:6px}
+[data-dense="1"] .chip{padding:4px 11px}
+[data-dense="1"] .stats{gap:8px}
+[data-dense="1"] .stat{padding:9px 12px}
+[data-dense="1"] .stat.hero .v{font-size:calc(26px*var(--s))}
+[data-dense="1"] .bars{height:130px;gap:6px;margin-top:8px}
+[data-dense="1"] .lrow{padding:7px 0}
+[data-dense="1"] .grid{grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:8px}
+[data-dense="1"] .pcard{padding:9px 10px;border-radius:calc(var(--r-lg) - 4px)}
+[data-dense="1"] .pprice{margin-top:4px}
+[data-dense="1"] .pfoot{margin-top:6px;min-height:34px}
+[data-dense="1"] .step button{width:32px;height:32px}
+[data-dense="1"] .cartbar{padding:8px 8px 8px 14px;margin-top:12px}
+[data-dense="1"] .sum-row{padding:5px 0}
+[data-dense="1"] .methods button{padding:8px 4px}
+[data-dense="1"] .irow{padding:8px;gap:6px;margin-bottom:6px}
+[data-dense="1"] .sumbar{padding-top:10px}
+[data-dense="1"] .cards{gap:6px}
+[data-dense="1"] .mcard{padding:9px 8px 9px 12px;gap:8px}
+[data-dense="1"] details.tx{margin-bottom:6px}
+[data-dense="1"] details.tx summary{padding:9px 12px}
+[data-dense="1"] details.tx .det{padding:0 12px 10px}
+[data-dense="1"] .det td{padding:3px 0}
+[data-dense="1"] .acts-row{margin-top:8px}
+[data-dense="1"] .piutang{padding:9px 12px;margin-top:8px}
+[data-dense="1"] .empty{padding:20px 12px}
+[data-dense="1"] .range{margin:8px 0 2px}
+[data-dense="1"] .sheet{padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+[data-dense="1"] .sheet-h{margin-bottom:8px}
+[data-dense="1"] .key{height:52px}
 
 /* ---- login keypad ---- */
 .login-card.pin{text-align:center;max-width:380px;padding:28px 22px 24px}
 .login-card.pin .logo{margin:0 auto 14px}
-.login-card.pin h1{font-size:26px}
-.login-card.pin .pm{margin:4px 0 18px;font-size:14px;min-height:20px}
+.login-card.pin h1{font-size:calc(26px*var(--s))}
+.login-card.pin .pm{margin:4px 0 18px;font-size:calc(14px*var(--s));min-height:20px}
 .login-card.pin .pm.bad{color:var(--red);font-weight:600}
 .dots{display:flex;justify-content:center;gap:12px;margin:0 0 26px;flex-wrap:wrap}
 .dots span{width:15px;height:15px;border-radius:50%;border:2px solid var(--line);background:transparent;transition:background .12s,border-color .12s,transform .12s}
@@ -303,11 +387,11 @@ h1{letter-spacing:-.025em}
 @keyframes shk{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
 .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .pad.wait{opacity:.6;pointer-events:none}
-.key{height:60px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--line-2);color:var(--ink);font-size:21px;font-weight:700;cursor:pointer;transition:transform .06s,background .12s;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.key{height:60px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--line-2);color:var(--ink);font-size:calc(21px*var(--s));font-weight:700;cursor:pointer;transition:transform .06s,background .12s;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .key:hover{background:var(--line)}
 .key:active{transform:scale(.95)}
-.key.alt{font-size:14px;font-weight:600;color:var(--muted)}
-.key.go{background:var(--brand);border-color:var(--brand);color:var(--on-brand);font-size:15px}
+.key.alt{font-size:calc(14px*var(--s));font-weight:600;color:var(--muted)}
+.key.go{background:var(--brand);border-color:var(--brand);color:var(--on-brand);font-size:calc(15px*var(--s))}
 .key.go:hover{background:var(--brand-d);border-color:var(--brand-d)}
 @media(prefers-reduced-motion:reduce){.dots.shake{animation:none}}
 </style>
@@ -380,6 +464,7 @@ store.del('dk_pin'); // PIN lama yang tersimpan permanen dibersihkan; kini hanya
 
 const ICONS = {
   palette:'<path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.3-.3-.3-.5-.7-.5-1.2 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>',
+  cog:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   check:'<path d="M5 12l5 5 9-10"/>',
   home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
   cart:'<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.7 12.4a1 1 0 0 0 1 .8h8.6a1 1 0 0 0 1-.8L20 7H6"/>',
@@ -488,6 +573,7 @@ const sndKey = () => beep(1050, 0.07, 'square', 1);
 const sndDel = () => beep(640, 0.07, 'square', 0.9);
 const sndOk = () => { beep(880, 0.09, 'square', 1); setTimeout(() => beep(1320, 0.13, 'square', 1), 90); };
 const sndErr = () => beep(170, 0.3, 'sawtooth', 1);
+SND.on = store.get('dk_snd') !== '0';
 
 /* ======================= LOGIN (keypad PIN) ======================= */
 function showLogin(msg) {
@@ -548,19 +634,22 @@ function showLogin(msg) {
 }
 function logout() { sess.del('dk_pin'); cfg.pin = ''; showLogin(); }
 
-/* ======================= TEMA ======================= */
+/* ======================= PENGATURAN: TEMPLATE, UKURAN HURUF, MODE PADAT ======================= */
+/* [id, nama, deskripsi, warna latar, warna kartu, warna utama, font pratinjau, radius pratinjau] */
 const THEMES = [
-  ['zamrud', 'Zamrud', 'Hijau klasik', '#F5F7F6', '#FFFFFF', '#0F7B5F'],
-  ['biru', 'Biru Korporat', 'Rapi dan tepercaya', '#F3F6FA', '#FFFFFF', '#1D5FBF'],
-  ['indigo', 'Indigo Modern', 'Segar dan tegas', '#F5F5FB', '#FFFFFF', '#4F46E5'],
-  ['ungu', 'Ungu Royal', 'Elegan', '#F8F5FC', '#FFFFFF', '#7C3AED'],
-  ['marun', 'Marun', 'Hangat dan berkelas', '#FAF5F4', '#FFFFFF', '#A32A2A'],
-  ['oranye', 'Oranye Hangat', 'Energik', '#FBF7F3', '#FFFFFF', '#C2410C'],
-  ['teal', 'Teal Segar', 'Bersih dan tenang', '#F2F8F9', '#FFFFFF', '#0E7490'],
-  ['slate', 'Slate Netral', 'Minimalis profesional', '#F4F5F7', '#FFFFFF', '#334155'],
-  ['gelap-hijau', 'Gelap Hijau', 'Mode gelap', '#0D1512', '#151F1B', '#2FBF8F'],
-  ['gelap-biru', 'Gelap Midnight', 'Mode gelap', '#0B1220', '#121B2E', '#5B8DEF']
+  ['zamrud', 'Zamrud', 'Hijau klasik, seimbang', '#F5F7F6', '#FFFFFF', '#0F7B5F', "'Plus Jakarta Sans',sans-serif", '8px'],
+  ['biru', 'Biru Korporat', 'Rapi, tegas, sudut kecil', '#F3F6FA', '#FFFFFF', '#1D5FBF', "'Inter',sans-serif", '4px'],
+  ['indigo', 'Indigo Modern', 'Bulat besar, bayangan lembut', '#F5F5FB', '#FFFFFF', '#4F46E5', "'Manrope',sans-serif", '12px'],
+  ['ungu', 'Ungu Royal', 'Elegan, huruf Poppins', '#F8F5FC', '#FFFFFF', '#7C3AED', "'Poppins',sans-serif", '10px'],
+  ['marun', 'Marun Klasik', 'Judul serif, kesan restoran', '#FAF5F4', '#FFFFFF', '#A32A2A', "'Lora',serif", '6px'],
+  ['oranye', 'Oranye Hangat', 'Ramah, sangat membulat', '#FBF7F3', '#FFFFFF', '#C2410C', "'Nunito',sans-serif", '14px'],
+  ['teal', 'Teal Segar', 'Bersih dan tenang', '#F2F8F9', '#FFFFFF', '#0E7490', "'Manrope',sans-serif", '8px'],
+  ['slate', 'Slate Netral', 'Minimalis, tanpa bayangan', '#F4F5F7', '#FFFFFF', '#334155', 'system-ui,sans-serif', '2px'],
+  ['gelap-hijau', 'Gelap Hijau', 'Mode gelap, nyaman malam hari', '#0D1512', '#151F1B', '#2FBF8F', "'Inter',sans-serif", '8px'],
+  ['gelap-biru', 'Gelap Midnight', 'Mode gelap, biru dingin', '#0B1220', '#121B2E', '#5B8DEF', "'Manrope',sans-serif", '12px']
 ];
+const FONT_SIZES = [['0.93', 'Kecil'], ['1', 'Normal'], ['1.12', 'Besar'], ['1.25', 'Sangat besar']];
+
 function applyTheme(id, save) {
   if (!THEMES.some(t => t[0] === id)) id = 'zamrud';
   document.documentElement.setAttribute('data-theme', id);
@@ -568,20 +657,59 @@ function applyTheme(id, save) {
   const m = document.querySelector('meta[name="theme-color"]');
   if (m) m.content = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#0F7B5F';
 }
-function showThemes() {
+function applyFont(v, save) {
+  if (!FONT_SIZES.some(f => f[0] === v)) v = '1';
+  document.documentElement.style.setProperty('--s', v);
+  if (save) store.set('dk_fs', v);
+}
+function applyDense(on, save) {
+  document.documentElement.setAttribute('data-dense', on ? '1' : '0');
+  if (save) store.set('dk_dense', on ? '1' : '0');
+}
+const curFont = () => { const v = store.get('dk_fs') || '1'; return FONT_SIZES.some(f => f[0] === v) ? v : '1'; };
+
+function showSettings() {
   const cur = document.documentElement.getAttribute('data-theme') || 'zamrud';
-  const { ov } = modal('Tampilan', `<p class="muted small" style="margin:-4px 0 14px">Pilih tema warna. Pilihan tersimpan di perangkat ini.</p>
+  const dense = store.get('dk_dense') === '1';
+  const { ov } = modal('Pengaturan', `
+    <h3 class="set-sec">Template tampilan</h3>
+    <p class="muted small" style="margin-bottom:12px">Pilih 1 dari 10 template. Warna, huruf, dan bentuk sudut ikut berubah. Pilihan tersimpan di perangkat ini.</p>
     <div class="themes">${THEMES.map(t => `<button type="button" class="theme ${t[0] === cur ? 'on' : ''}" data-th="${t[0]}">
       <span class="ck">${icon('check')}</span>
-      <span class="sw"><i style="background:${t[3]}"></i><i style="background:${t[4]}"></i><i style="background:${t[5]}"></i></span>
-      <b>${esc(t[1])}</b><small>${esc(t[2])}</small></button>`).join('')}</div>`);
+      <span class="sw" style="border-radius:${t[7]};background:${t[3]}"><i style="background:${t[4]}"></i><i style="background:${t[5]}"></i></span>
+      <b style="font-family:${t[6]}">${esc(t[1])}</b><small>${esc(t[2])}</small></button>`).join('')}</div>
+
+    <h3 class="set-sec">Ukuran huruf</h3>
+    <div class="seg wide" id="fs">${FONT_SIZES.map(f => `<button data-fs="${f[0]}" class="${f[0] === curFont() ? 'on' : ''}">${f[1]}</button>`).join('')}</div>
+    <div class="fs-demo">Contoh teks: Nasi goreng spesial, Rp&nbsp;25.000</div>
+
+    <h3 class="set-sec">Kepadatan tampilan</h3>
+    <div class="seg wide" id="dn"><button data-d="0" class="${dense ? '' : 'on'}">Normal</button><button data-d="1" class="${dense ? 'on' : ''}">Padat</button></div>
+    <p class="hint" style="margin-top:6px">Mode padat merapatkan jarak dan memperkecil tombol agar lebih banyak data muat di layar kecil.</p>
+
+    <h3 class="set-sec">Suara tombol PIN</h3>
+    <div class="seg wide" id="snd"><button data-s="1" class="${SND.on ? 'on' : ''}">Hidup</button><button data-s="0" class="${SND.on ? '' : 'on'}">Mati</button></div>`);
+
+  const pick = (sel, attr, fn) => {
+    const box = ov.querySelector(sel);
+    box.onclick = e => {
+      const b = e.target.closest('[' + attr + ']'); if (!b) return;
+      box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      fn(b.getAttribute(attr));
+    };
+  };
   ov.querySelector('.themes').onclick = e => {
     const b = e.target.closest('[data-th]'); if (!b) return;
     applyTheme(b.dataset.th, true);
     ov.querySelectorAll('.theme').forEach(x => x.classList.toggle('on', x === b));
   };
+  pick('#fs', 'data-fs', v => applyFont(v, true));
+  pick('#dn', 'data-d', v => applyDense(v === '1', true));
+  pick('#snd', 'data-s', v => { SND.on = v === '1'; store.set('dk_snd', SND.on ? '1' : '0'); if (SND.on) sndKey(); });
 }
 applyTheme(document.documentElement.getAttribute('data-theme') || 'zamrud');
+applyFont(curFont());
+applyDense(store.get('dk_dense') === '1');
 
 /* ======================= SHELL ======================= */
 const NAV = [
@@ -595,12 +723,12 @@ async function boot() {
     <aside class="side"><div class="brand"><div class="logo">${LOGO}</div>DapurKu</div>
       ${NAV.map(n => `<button class="nav" data-go="${n[0]}">${icon(n[2])}${n[1]}</button>`).join('')}
       <div class="grow"></div>
-      <button class="nav" id="th">${icon('palette')}Tampilan</button>
+      <button class="nav" id="th">${icon('cog')}Pengaturan</button>
       <button class="nav" id="rf">${icon('refresh')}Muat ulang data</button>
       <button class="nav" id="lo">${icon('logout')}Keluar</button></aside>
     <div class="shell">
       <header class="top"><div class="brand"><div class="logo">${LOGO}</div>DapurKu</div>
-        <div class="top-actions"><button class="icon-btn" id="th2" aria-label="Tampilan">${icon('palette')}</button><button class="icon-btn" id="rf2" aria-label="Muat ulang">${icon('refresh')}</button>
+        <div class="top-actions"><button class="icon-btn" id="th2" aria-label="Pengaturan">${icon('cog')}</button><button class="icon-btn" id="rf2" aria-label="Muat ulang">${icon('refresh')}</button>
         <button class="icon-btn" id="lo2" aria-label="Keluar">${icon('logout')}</button></div></header>
       <main class="main" id="view"></main></div>
     <nav class="bnav">${NAV.map(n => `<button data-go="${n[0]}">${icon(n[2])}<span>${n[1]}</span></button>`).join('')}</nav>`;
@@ -608,7 +736,7 @@ async function boot() {
   const refresh = () => guard(null, async () => { await loadMaster(); render(); toast('Data diperbarui'); });
   $('#rf').onclick = refresh; $('#rf2').onclick = refresh;
   $('#lo').onclick = logout; $('#lo2').onclick = logout;
-  $('#th').onclick = showThemes; $('#th2').onclick = showThemes;
+  $('#th').onclick = showSettings; $('#th2').onclick = showSettings;
   $('#view').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   await loadMaster();
   render();
