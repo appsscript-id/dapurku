@@ -231,6 +231,13 @@ details.tx .det{padding:0 16px 14px;border-top:1px solid var(--line-2)}
 .det .note{font-size:13px;color:var(--muted);margin-top:8px}
 .range{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
 
+.acts-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tx .badge{margin-left:6px;vertical-align:middle}
+.piutang{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;cursor:pointer;
+  background:var(--amber-50);border:1px solid #F0D894;border-radius:var(--r-lg);padding:14px 16px;margin-top:12px;color:var(--ink)}
+.piutang b{display:block}
+.piutang span.s{font-size:13px;color:var(--amber)}
+
 /* ======================= LOGIN ======================= */
 .login{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;padding:20px;overflow:auto}
 .login-card{width:100%;max-width:400px}
@@ -424,6 +431,13 @@ function render() {
   guard(null, () => PAGES[state.page]());
 }
 
+const methodBtns = sel => ['Tunai', 'QRIS', 'Transfer'].map(m => `<button type="button" data-m="${m}" class="${m === sel ? 'on' : ''}">${m}</button>`).join('');
+function goLaporan(filter, from) {
+  lap.sheet = 'Penjualan'; lap.filter = filter; lap.from = from; lap.to = todayStr();
+  location.hash = '#/laporan';
+  if (state.page === 'laporan') render();
+}
+
 /* ======================= BERANDA ======================= */
 async function pageDashboard() {
   const v = $('#view');
@@ -439,6 +453,7 @@ async function pageDashboard() {
       <div class="stat"><div class="l">Penjualan bulan ini</div><div class="v num">${rp(d.bulanIni.omzet)}</div><div class="s">Laba kotor ${rp(d.bulanIni.laba)}</div></div>
       <div class="stat"><div class="l">Belanja bahan bulan ini</div><div class="v num">${rp(d.bulanIni.beli)}</div><div class="s">Nilai stok ${rp(d.nilaiStok)}</div></div>
     </div>
+    ${d.piutang && d.piutang.count ? `<button class="piutang" id="pt"><div><b>${d.piutang.count} penjualan belum lunas</b><span class="s">Total ${rp(d.piutang.total)}. Ketuk untuk melihat dan menandai lunas.</span></div><span class="badge warn">Lihat</span></button>` : ''}
     <div class="dgrid">
       <section class="panel"><h2>Penjualan 7 hari terakhir</h2>
         <div class="bars">${d.chart.map((c, i) => `
@@ -454,6 +469,7 @@ async function pageDashboard() {
       ${d.low.length ? d.low.map(b => `<div class="lrow"><div class="t">${esc(b.nama)}</div>
         <div class="r"><span class="badge ${b.stok <= 0 ? 'bad' : 'warn'}">Sisa ${nf(b.stok)} ${esc(b.satuan)}</span></div></div>`).join('')
         : '<div class="empty" style="padding:22px 0">Semua stok bahan aman.</div>'}</section>`;
+  const pt = $('#pt'); if (pt) pt.onclick = () => goLaporan('belum', '2020-01-01');
 }
 
 /* ======================= KASIR ======================= */
@@ -476,7 +492,8 @@ function pageKasir() {
   const v = $('#view');
   const cats = ['Semua', ...new Set(state.produk.map(p => p.Kategori || 'Umum'))];
   let cat = 'Semua', q = '';
-  v.innerHTML = `<div class="ph"><div><h1>Kasir</h1><p>Pilih menu yang dipesan pelanggan, lalu bayar.</p></div></div>
+  v.innerHTML = `<div class="ph"><div><h1>Kasir</h1><p>Pilih menu yang dipesan pelanggan, lalu bayar.</p></div>
+    <button class="btn ghost sm" id="hist">Riwayat penjualan</button></div>
     ${state.produk.length ? `
     <div class="search">${icon('search')}<input class="input" id="q" placeholder="Cari menu" aria-label="Cari menu"></div>
     <div class="chips" id="chips"></div><div class="grid" id="pgrid"></div>
@@ -484,6 +501,7 @@ function pageKasir() {
       <button class="btn" id="pay">Bayar</button></div>`
     : `<div class="panel empty"><strong>Belum ada menu</strong>Tambahkan produk dulu di halaman Stok agar bisa dijual.
        <br><button class="btn primary" onclick="location.hash='#/stok'">Tambah produk</button></div>`}`;
+  $('#hist').onclick = () => goLaporan('semua', todayStr());
   if (!state.produk.length) return;
 
   const drawChips = () => $('#chips').innerHTML = cats.map(c => `<button class="chip ${c === cat ? 'on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
@@ -524,10 +542,12 @@ function checkout() {
   }).filter(Boolean);
   if (!lines.length) return;
   const sub = lines.reduce((s, l) => s + l.q * l.p.HargaJual, 0);
-  let metode = 'Tunai';
+  let metode = 'Tunai', status = 'Lunas';
   const { ov, close } = modal('Pembayaran', `
     <div style="margin-bottom:10px">${lines.map(l => `<div class="sum-row" style="padding:5px 0"><span>${l.q} x ${esc(l.p.Nama)}</span><b class="num">${rp(l.q * l.p.HargaJual)}</b></div>`).join('')}</div>
-    <div class="field"><label>Metode bayar</label><div class="methods" id="meth">
+    <div class="field"><label>Status pembayaran</label><div class="methods" style="grid-template-columns:1fr 1fr" id="stt">
+      <button type="button" data-s="Lunas" class="on">Lunas</button><button type="button" data-s="Belum Lunas">Bayar nanti</button></div></div>
+    <div class="field" id="mf"><label>Metode bayar</label><div class="methods" id="meth">
       ${['Tunai', 'QRIS', 'Transfer'].map(m => `<button type="button" data-m="${m}" class="${m === metode ? 'on' : ''}">${m}</button>`).join('')}</div></div>
     <div class="two">${field('Diskon (Rp)', '<input class="input" id="dk" type="number" inputmode="numeric" min="0" placeholder="0">')}
       ${field('Tanggal', `<input class="input" id="tg" type="date" value="${todayStr()}">`)}</div>
@@ -538,14 +558,19 @@ function checkout() {
   const calc = () => { const dk = Math.min(Math.max(num($('#dk', ov).value), 0), sub); $('#gt', ov).textContent = rp(sub - dk); };
   $('#dk', ov).oninput = calc;
   $('#meth', ov).onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; metode = b.dataset.m; ov.querySelectorAll('#meth button').forEach(x => x.classList.toggle('on', x === b)); };
+  $('#stt', ov).onclick = e => {
+    const b = e.target.closest('[data-s]'); if (!b) return; status = b.dataset.s;
+    ov.querySelectorAll('#stt button').forEach(x => x.classList.toggle('on', x === b));
+    $('#mf', ov).hidden = status !== 'Lunas';
+  };
   $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
     const r = await api('sell', {
-      tanggal: $('#tg', ov).value, pelanggan: $('#pl', ov).value, metode, diskon: num($('#dk', ov).value), catatan: $('#ct2', ov).value,
+      tanggal: $('#tg', ov).value, pelanggan: $('#pl', ov).value, metode, status, diskon: num($('#dk', ov).value), catatan: $('#ct2', ov).value,
       items: lines.map(l => ({ id: l.p.ID, qty: l.q }))
     });
     state.cart = {}; close();
     await loadMaster(); render();
-    toast('Penjualan tersimpan: ' + rp(r.total));
+    toast(status === 'Lunas' ? 'Penjualan tersimpan: ' + rp(r.total) : 'Tersimpan sebagai belum lunas: ' + rp(r.total));
   });
 }
 
@@ -615,12 +640,18 @@ function txList(rows, kind) {
       ? `<tr><td>${esc(it.nama)}<div class="small muted">${nf(it.qty)} ${esc(it.satuan || '')}${kind === 'Pembelian' ? ' x ' + rp(it.harga) : ''}</div></td><td class="num">${rp(it.sub)}</td></tr>`
       : `<tr><td>${esc(it.nama)}<div class="small muted">${nf(it.qty)} x ${rp(it.harga)}</div></td><td class="num">${rp(it.sub)}</td></tr>`;
     return `<details class="tx"><summary>
-      <div><div class="who">${esc(who)}</div><div class="when">${fmtTgl(r.Tanggal)}${kind === 'Penjualan' ? ' - ' + esc(r.Metode) : ''}</div></div>
+      <div><div class="who">${esc(who)}${kind === 'Penjualan' ? (r.Status === 'Belum Lunas' ? '<span class="badge warn">Belum lunas</span>' : '<span class="badge ok">Lunas</span>') : ''}</div><div class="when">${fmtTgl(r.Tanggal)}${kind === 'Penjualan' ? ' - ' + esc(r.Metode) : ''}</div></div>
       <div class="amt num">${amt}${kind === 'Penjualan' ? `<div class="small muted" style="font-weight:600">Laba ${rp(r.Total - r.TotalHPP)}</div>` : ''}${kind === 'Produksi' ? `<div class="small muted" style="font-weight:600">Biaya ${rp(r.Biaya)}</div>` : ''}</div></summary>
       <div class="det"><table>${items.map(line).join('')}</table>
       ${kind === 'Penjualan' && r.Diskon ? `<div class="note">Diskon ${rp(r.Diskon)}</div>` : ''}
       ${r.Catatan ? `<div class="note">Catatan: ${esc(r.Catatan)}</div>` : ''}
-      <div class="note">No. ${esc(r.ID)}</div></div></details>`;
+      ${kind === 'Penjualan' && r.Status !== 'Belum Lunas' && r.TglLunas ? `<div class="note">Lunas pada ${fmtTgl(r.TglLunas)}</div>` : ''}
+      <div class="note">No. ${esc(r.ID)}</div>
+      ${kind === 'Penjualan' ? `<div class="acts-row">
+        ${r.Status === 'Belum Lunas' ? `<button class="btn sm primary" data-act="pay" data-id="${esc(r.ID)}">Tandai lunas</button>` : ''}
+        <button class="btn sm ghost" data-act="edit" data-id="${esc(r.ID)}">${icon('edit')}Ubah</button>
+        <button class="btn sm danger" data-act="del" data-id="${esc(r.ID)}">${icon('trash')}Hapus</button></div>` : ''}
+      </div></details>`;
   }).join('');
 }
 
@@ -771,13 +802,15 @@ function formProduk(p) {
 }
 
 /* ======================= LAPORAN ======================= */
-const lap = { sheet: 'Penjualan', from: null, to: null };
+const lap = { sheet: 'Penjualan', from: null, to: null, filter: 'semua' };
 async function pageLaporan() {
   lap.from = lap.from || monthStart(); lap.to = lap.to || todayStr();
+  const isJ = lap.sheet === 'Penjualan';
   const v = $('#view');
   v.innerHTML = `<div class="ph"><div><h1>Laporan</h1><p>Riwayat transaksi berdasarkan periode.</p></div>
     <button class="btn ghost sm" id="csv">${icon('download')}Unduh CSV</button></div>
     <div class="seg" id="tabs">${['Penjualan', 'Pembelian', 'Produksi'].map(t => `<button data-t="${t}" class="${t === lap.sheet ? 'on' : ''}">${t}</button>`).join('')}</div>
+    ${isJ ? `<div><div class="seg" id="flt" style="margin-top:10px">${[['semua', 'Semua'], ['belum', 'Belum lunas'], ['lunas', 'Lunas']].map(f => `<button data-f="${f[0]}" class="${f[0] === lap.filter ? 'on' : ''}">${f[1]}</button>`).join('')}</div></div>` : ''}
     <div class="chips" style="margin-top:12px" id="quick">
       <button class="chip" data-d="0">Hari ini</button><button class="chip" data-d="6">7 hari</button>
       <button class="chip" data-d="m">Bulan ini</button><button class="chip" data-d="29">30 hari</button></div>
@@ -793,35 +826,151 @@ async function pageLaporan() {
   $('#t').onchange = e => { lap.to = e.target.value; load(); };
 
   let data = [];
+  const rowsView = () => isJ ? data.filter(r => lap.filter === 'semua' || (lap.filter === 'belum') === (r.Status === 'Belum Lunas')) : data;
+
+  function show() {
+    const rows = rowsView();
+    const sumv = k => rows.reduce((s, r) => s + num(r[k]), 0);
+    let cards = '';
+    if (isJ) {
+      const tot = sumv('Total'), hpp = sumv('TotalHPP');
+      const pt = data.filter(r => r.Status === 'Belum Lunas');
+      cards = `<div class="stat"><div class="l">Total penjualan</div><div class="v num">${rp(tot)}</div><div class="s">${rows.length} transaksi</div></div>
+        <div class="stat"><div class="l">Laba kotor</div><div class="v num">${rp(tot - hpp)}</div><div class="s">Penjualan dikurangi HPP</div></div>
+        <div class="stat"><div class="l">Belum lunas</div><div class="v num">${rp(pt.reduce((s, r) => s + num(r.Total), 0))}</div><div class="s">${pt.length} transaksi</div></div>`;
+    } else if (lap.sheet === 'Pembelian') {
+      cards = `<div class="stat"><div class="l">Total belanja</div><div class="v num">${rp(sumv('Total'))}</div><div class="s">${rows.length} transaksi</div></div>`;
+    } else {
+      cards = `<div class="stat"><div class="l">Total hasil</div><div class="v num">${nf(sumv('Qty'))} porsi</div><div class="s">${rows.length} batch</div></div>
+        <div class="stat"><div class="l">Biaya bahan</div><div class="v num">${rp(sumv('Biaya'))}</div></div>`;
+    }
+    $('#sum').innerHTML = `<div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:16px">${cards}</div>`;
+    $('#res').innerHTML = txList(rows, lap.sheet);
+  }
   async function load() {
     $('#res').innerHTML = '<div class="skel"></div>';
     data = await api('list', { sheet: lap.sheet, from: lap.from, to: lap.to });
-    const sumv = k => data.reduce((s, r) => s + num(r[k]), 0);
-    let cards = '';
-    if (lap.sheet === 'Penjualan') {
-      const tot = sumv('Total'), hpp = sumv('TotalHPP');
-      cards = `<div class="stat"><div class="l">Total penjualan</div><div class="v num">${rp(tot)}</div><div class="s">${data.length} transaksi</div></div>
-        <div class="stat"><div class="l">Laba kotor</div><div class="v num">${rp(tot - hpp)}</div><div class="s">Penjualan dikurangi HPP</div></div>`;
-    } else if (lap.sheet === 'Pembelian') {
-      cards = `<div class="stat"><div class="l">Total belanja</div><div class="v num">${rp(sumv('Total'))}</div><div class="s">${data.length} transaksi</div></div>`;
-    } else {
-      cards = `<div class="stat"><div class="l">Total hasil</div><div class="v num">${nf(sumv('Qty'))} porsi</div><div class="s">${data.length} batch</div></div>
-        <div class="stat"><div class="l">Biaya bahan</div><div class="v num">${rp(sumv('Biaya'))}</div></div>`;
-    }
-    $('#sum').innerHTML = `<div class="stats" style="grid-template-columns:repeat(2,1fr);margin-bottom:16px">${cards}</div>`;
-    $('#res').innerHTML = txList(data, lap.sheet);
+    show();
   }
+
+  const flt = $('#flt');
+  if (flt) flt.onclick = e => {
+    const b = e.target.closest('[data-f]'); if (!b) return;
+    lap.filter = b.dataset.f; flt.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); show();
+  };
+
+  $('#res').onclick = async e => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const r = data.find(x => x.ID === b.dataset.id); if (!r) return;
+    if (b.dataset.act === 'edit') return editSale(r);
+    if (b.dataset.act === 'pay') return paySale(r);
+    if (b.dataset.act === 'del') {
+      const ok = await ask('Hapus penjualan?', `Penjualan ${r.Pelanggan ? 'untuk ' + r.Pelanggan + ' ' : ''}senilai ${rp(r.Total)} akan dihapus dan stok produk dikembalikan.`);
+      if (ok) guard(null, async () => { await api('deleteSale', { id: r.ID }); await loadMaster(); toast('Penjualan dihapus, stok dikembalikan'); pageLaporan(); });
+    }
+  };
+
   $('#csv').onclick = () => {
-    if (!data.length) return toast('Tidak ada data untuk diunduh', true);
+    const rows = rowsView();
+    if (!rows.length) return toast('Tidak ada data untuk diunduh', true);
     const q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
-    const head = ['ID', 'Tanggal', 'Pihak', 'Item', 'Total'];
-    const lines = data.map(r => [r.ID, r.Tanggal, r.Pelanggan || r.Supplier || r.Produk || '',
-      (r.Items || []).map(i => `${i.qty} ${i.nama}`).join('; '), r.Total ?? r.Biaya].map(q).join(','));
+    const head = ['ID', 'Tanggal', 'Pihak', 'Item', 'Total', 'Status'];
+    const lines = rows.map(r => [r.ID, r.Tanggal, r.Pelanggan || r.Supplier || r.Produk || '',
+      (r.Items || []).map(i => `${i.qty} ${i.nama}`).join('; '), r.Total ?? r.Biaya, r.Status || ''].map(q).join(','));
     const blob = new Blob(['\ufeff' + [head.map(q).join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = `laporan-${lap.sheet.toLowerCase()}-${lap.from}_${lap.to}.csv`; a.click(); URL.revokeObjectURL(a.href);
   };
   await load();
+}
+
+/* ---------- Tandai lunas ---------- */
+function paySale(r) {
+  let metode = 'Tunai';
+  const { ov, close } = modal('Tandai lunas', `
+    <div class="sum-row"><span>${esc(r.Pelanggan || 'Pelanggan umum')}</span><b class="num">${rp(r.Total)}</b></div>
+    <div class="field"><label>Dibayar dengan</label><div class="methods" id="meth">${methodBtns(metode)}</div></div>
+    ${field('Tanggal bayar', `<input class="input" id="tg" type="date" value="${todayStr()}">`)}
+    <div class="sheet-f"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Tandai lunas</button></div>`);
+  $('#meth', ov).onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; metode = b.dataset.m; ov.querySelectorAll('#meth button').forEach(x => x.classList.toggle('on', x === b)); };
+  $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
+    await api('markPaid', { id: r.ID, metode, tanggal: $('#tg', ov).value });
+    close(); toast('Penjualan ditandai lunas'); pageLaporan();
+  });
+}
+
+/* ---------- Ubah penjualan ---------- */
+function editSale(r) {
+  const items = (r.Items || []).map(i => ({ id: i.id, qty: i.qty, harga: i.harga, hpp: i.hpp }));
+  let status = r.Status === 'Belum Lunas' ? 'Belum Lunas' : 'Lunas';
+  let metode = ['Tunai', 'QRIS', 'Transfer'].includes(r.Metode) ? r.Metode : 'Tunai';
+  const { ov, close } = modal('Ubah penjualan', `
+    <div class="two">${field('Tanggal', `<input class="input" id="tg" type="date" value="${esc(String(r.Tanggal).slice(0, 10))}">`)}
+      ${field('Pelanggan', `<input class="input" id="pl" value="${esc(r.Pelanggan)}" placeholder="Pelanggan umum">`)}</div>
+    <h3 style="margin-bottom:10px">Item pesanan</h3>
+    <div id="eri"></div>
+    <button class="btn ghost sm" id="eadd" style="margin-bottom:16px">${icon('plus')}Tambah menu</button>
+    <div class="two">${field('Diskon (Rp)', `<input class="input" id="dk" type="number" inputmode="numeric" min="0" value="${r.Diskon || ''}" placeholder="0">`)}
+      ${field('Catatan', `<input class="input" id="ct" value="${esc(r.Catatan)}">`)}</div>
+    <div class="field"><label>Status pembayaran</label><div class="methods" style="grid-template-columns:1fr 1fr" id="stt">
+      <button type="button" data-s="Lunas" class="${status === 'Lunas' ? 'on' : ''}">Lunas</button>
+      <button type="button" data-s="Belum Lunas" class="${status === 'Belum Lunas' ? 'on' : ''}">Belum lunas</button></div></div>
+    <div class="field" id="mf" ${status === 'Lunas' ? '' : 'hidden'}><label>Metode bayar</label><div class="methods" id="meth">${methodBtns(metode)}</div></div>
+    <div class="sum-row big"><span>Total</span><span class="num" id="gt"></span></div>
+    <div class="sheet-f" style="margin-top:14px"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Simpan perubahan</button></div>`);
+
+  const calc = () => {
+    const sub = items.reduce((s, it) => s + num(it.qty) * num(it.harga), 0);
+    const dk = Math.min(Math.max(num($('#dk', ov).value), 0), sub);
+    $('#gt', ov).textContent = rp(sub - dk);
+  };
+  const draw = () => {
+    $('#eri', ov).innerHTML = items.map((it, i) => `<div class="irow" data-i="${i}">
+      <select class="select" data-k="id" aria-label="Pilih menu"><option value="">Pilih menu</option>
+        ${state.produk.map(p => `<option value="${p.ID}" ${p.ID === it.id ? 'selected' : ''}>${esc(p.Nama)}</option>`).join('')}</select>
+      <input class="input" data-k="qty" type="number" inputmode="decimal" min="0" step="any" placeholder="Jumlah" value="${esc(it.qty)}" aria-label="Jumlah">
+      <input class="input" data-k="harga" type="number" inputmode="numeric" min="0" step="any" placeholder="Harga" value="${esc(it.harga)}" aria-label="Harga satuan">
+      <button type="button" class="icon-btn danger" data-del aria-label="Hapus baris">${icon('trash')}</button>
+      <div class="isub num" data-sub>${rp(num(it.qty) * num(it.harga))}</div></div>`).join('');
+    calc();
+  };
+  const box = $('#eri', ov);
+  box.addEventListener('input', e => {
+    const row = e.target.closest('.irow'), k = e.target.dataset.k; if (!row || !k || k === 'id') return;
+    const it = items[+row.dataset.i]; it[k] = e.target.value;
+    row.querySelector('[data-sub]').textContent = rp(num(it.qty) * num(it.harga)); calc();
+  });
+  box.addEventListener('change', e => {
+    const row = e.target.closest('.irow'); if (!row || e.target.dataset.k !== 'id') return;
+    const it = items[+row.dataset.i], p = state.produk.find(x => x.ID === e.target.value);
+    it.id = e.target.value;
+    if (p) { it.harga = p.HargaJual; it.hpp = p.HPP; if (!num(it.qty)) it.qty = 1; }
+    draw();
+  });
+  box.addEventListener('click', e => {
+    const d = e.target.closest('[data-del]'); if (!d) return;
+    items.splice(+d.closest('.irow').dataset.i, 1); draw();
+  });
+  $('#eadd', ov).onclick = () => { items.push({ id: '', qty: 1, harga: '', hpp: '' }); draw(); };
+  $('#dk', ov).oninput = calc;
+  $('#stt', ov).onclick = e => {
+    const b = e.target.closest('[data-s]'); if (!b) return; status = b.dataset.s;
+    ov.querySelectorAll('#stt button').forEach(x => x.classList.toggle('on', x === b));
+    $('#mf', ov).hidden = status !== 'Lunas';
+  };
+  $('#meth', ov).onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; metode = b.dataset.m; ov.querySelectorAll('#meth button').forEach(x => x.classList.toggle('on', x === b)); };
+  draw();
+
+  $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
+    if (!items.length) throw new Error('Tambahkan minimal satu menu, atau gunakan Hapus untuk membatalkan penjualan');
+    if (items.some(it => !it.id || !(num(it.qty) > 0))) throw new Error('Lengkapi menu dan jumlah pada setiap baris');
+    await api('updateSale', {
+      id: r.ID, tanggal: $('#tg', ov).value, pelanggan: $('#pl', ov).value, diskon: num($('#dk', ov).value),
+      catatan: $('#ct', ov).value, status, metode,
+      items: items.map(it => ({ id: it.id, qty: num(it.qty), harga: num(it.harga), hpp: it.hpp }))
+    });
+    close(); await loadMaster(); toast('Perubahan tersimpan'); pageLaporan();
+  });
 }
 
 /* ======================= MULAI ======================= */
