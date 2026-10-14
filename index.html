@@ -643,7 +643,7 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
   const price = r => withPrice ? numM(r.harga) : (find(r.id) ? find(r.id).HargaRata : 0);
   const subOf = r => num(r.qty) * price(r);
   const total = () => rows.reduce((s, r) => s + subOf(r), 0);
-  const totals = () => { totalEl.textContent = rp(total()); if (onChange) onChange(total()); };
+  const totals = () => { if (totalEl) totalEl.textContent = rp(total()); if (onChange) onChange(total()); };
 
   function draw() {
     root.innerHTML = rows.map((r, i) => {
@@ -718,7 +718,7 @@ function txList(rows, kind) {
 
 /* ======================= PEMBELIAN ======================= */
 async function pageBeli() {
-  const v = $('#view');
+  const v = $('#view'); if (!v) return;
   v.innerHTML = `<div class="ph"><div><h1>Pembelian bahan</h1><p>Catat belanja bahan baku. Stok dan harga rata-rata bahan diperbarui otomatis.</p></div></div>
   ${!state.bahan.length ? `<div class="panel empty"><strong>Belum ada data bahan</strong>Tambahkan daftar bahan dulu di halaman Data.
     <br><button class="btn primary" onclick="location.hash='#/stok'">Tambah bahan</button></div>` : `
@@ -745,7 +745,7 @@ async function pageBeli() {
     });
   }
   const rows = await api('list', { sheet: 'Pembelian', from: monthStart(), to: todayStr() });
-  $('#hist').innerHTML = txList(rows.slice(0, 15), 'Pembelian');
+  const hb = $('#hist'); if (hb) hb.innerHTML = txList(rows.slice(0, 15), 'Pembelian');
 }
 
 /* ======================= PRODUKSI ======================= */
@@ -771,6 +771,7 @@ async function pageProduksi() {
   if (ready) {
     let w = null;
     const upd = () => {
+      if (!$('#qt') || !$('#hpp')) return;
       const q = num($('#qt').value), c = w ? w.total() : 0;
       $('#hpp').textContent = q > 0 && c > 0 ? 'Modal per porsi ' + rp(c / q) : '';
     };
@@ -785,7 +786,7 @@ async function pageProduksi() {
     });
   }
   const rows = await api('list', { sheet: 'Produksi', from: monthStart(), to: todayStr() });
-  $('#hist').innerHTML = txList(rows.slice(0, 15), 'Produksi');
+  const hp = $('#hist'); if (hp) hp.innerHTML = txList(rows.slice(0, 15), 'Produksi');
 }
 
 /* ======================= PELANGGAN (menu sidebar) ======================= */
@@ -975,6 +976,7 @@ async function pageLaporan() {
   const rowsView = () => isJ ? data.filter(r => lap.filter === 'semua' || (lap.filter === 'belum') === (r.Status === 'Belum Lunas')) : data;
 
   function show() {
+    if (!$('#res') || !$('#sum')) return;
     const rows = rowsView();
     const sumv = k => rows.reduce((s, r) => s + num(r[k]), 0);
     let cards = '';
@@ -994,6 +996,7 @@ async function pageLaporan() {
     $('#res').innerHTML = txList(rows, lap.sheet);
   }
   async function load() {
+    if (!$('#res')) return;
     $('#res').innerHTML = '<div class="skel"></div>';
     data = await api('list', { sheet: lap.sheet, from: lap.from, to: lap.to });
     show();
