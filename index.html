@@ -61,10 +61,10 @@ h3{font-size:15px;font-weight:700}
 .top-actions{display:flex;gap:4px}
 .main{padding:16px 16px calc(92px + env(safe-area-inset-bottom,0px));max-width:1080px;margin:0 auto}
 .side{display:none}
-.bnav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(6,1fr);
-  background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(7,1fr);
+  background:#fff;border-top:1px solid var(--line);padding:6px 2px calc(6px + env(safe-area-inset-bottom,0px))}
 .bnav button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;padding:6px 0;
-  font-size:10.5px;font-weight:600;color:var(--muted);border-radius:10px;cursor:pointer}
+  font-size:10px;font-weight:600;color:var(--muted);border-radius:10px;cursor:pointer;min-width:0}
 .bnav button svg{width:22px;height:22px}
 .bnav button.on{color:var(--brand)}
 .bnav button.on svg{stroke-width:2.4}
@@ -266,8 +266,33 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwCWmU4VWvF3jRTkr3g61_6
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num = v => { const n = Number(String(v ?? '').replace(',', '.')); return isFinite(n) ? n : 0; };
-const rp = n => 'Rp\u00a0' + Math.round(Number(n) || 0).toLocaleString('id-ID');
-const nf = n => (Number(n) || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 });
+
+/* ---- Format angka dengan pemisah ribuan (10000 -> 10.000), tidak bergantung pada locale perangkat ---- */
+const sep = s => String(s).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const rp = n => { const v = Math.round(Number(n) || 0); return (v < 0 ? '-' : '') + 'Rp\u00a0' + sep(Math.abs(v)); };
+const nf = n => {
+  const x = Math.round((Number(n) || 0) * 100) / 100;
+  const p = String(Math.abs(x)).split('.');
+  return (x < 0 ? '-' : '') + sep(p[0]) + (p[1] ? ',' + p[1] : '');
+};
+/* Baca nilai uang dari input berformat ("10.000" -> 10000) */
+const numM = v => {
+  if (typeof v === 'number') return Math.round(v) || 0;
+  const d = String(v ?? '').replace(/\D/g, '');
+  return d ? Number(d) : 0;
+};
+/* Tampilkan nilai uang di dalam input ("10000" -> "10.000"; kosong jika 0) */
+const fm = v => { const n = numM(v); return n ? sep(n) : ''; };
+/* Atribut input uang: otomatis diberi titik ribuan saat mengetik */
+const MONEY = 'type="text" inputmode="numeric" autocomplete="off"';
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t && t.classList && t.classList.contains('money')) {
+    const d = t.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    t.value = d ? sep(d) : '';
+  }
+}, true);
+
 const pad = n => String(n).padStart(2, '0');
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const todayStr = () => ymd(new Date());
@@ -289,6 +314,7 @@ const ICONS = {
   bag:'<path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
   flame:'<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9z"/>',
   box:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5a5 5 0 0 1 4.5 5"/>',
   chart:'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
   plus:'<path d="M12 5v14M5 12h14"/>', minus:'<path d="M5 12h14"/>',
   edit:'<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
@@ -397,9 +423,9 @@ function logout() { store.del('dk_pin'); cfg.pin = ''; showLogin(); }
 /* ======================= SHELL ======================= */
 const NAV = [
   ['dashboard', 'Beranda', 'home'], ['kasir', 'Kasir', 'cart'], ['beli', 'Pembelian', 'bag'],
-  ['produksi', 'Produksi', 'flame'], ['stok', 'Data', 'box'], ['laporan', 'Laporan', 'chart']
+  ['produksi', 'Produksi', 'flame'], ['pelanggan', 'Pelanggan', 'users'], ['stok', 'Data', 'box'], ['laporan', 'Laporan', 'chart']
 ];
-const PAGES = { dashboard: pageDashboard, kasir: pageKasir, beli: pageBeli, produksi: pageProduksi, stok: pageStok, laporan: pageLaporan };
+const PAGES = { dashboard: pageDashboard, kasir: pageKasir, beli: pageBeli, produksi: pageProduksi, pelanggan: pagePelanggan, stok: pageStok, laporan: pageLaporan };
 
 async function boot() {
   $('#root').innerHTML = `
@@ -478,7 +504,7 @@ async function pageDashboard() {
   const d = await api('dashboard');
   const max = Math.max(...d.chart.map(c => c.omzet), 1);
   const dayName = t => new Date(t + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short' });
-  const short = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + ' jt' : n >= 1e3 ? Math.round(n / 1e3) + ' rb' : (n ? String(n) : '');
+  const short = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '').replace('.', ',') + ' jt' : n >= 1e3 ? Math.round(n / 1e3) + ' rb' : (n ? String(n) : '');
   v.innerHTML = `
     <div class="ph"><div><h1>Beranda</h1><p>Ringkasan usaha hari ini dan bulan berjalan.</p></div></div>
     <div class="stats">
@@ -582,14 +608,14 @@ function checkout() {
       <button type="button" data-s="Lunas" class="on">Lunas</button><button type="button" data-s="Belum Lunas">Bayar nanti</button></div></div>
     <div class="field" id="mf"><label>Metode bayar</label><div class="methods" id="meth">
       ${['Tunai', 'QRIS', 'Transfer'].map(m => `<button type="button" data-m="${m}" class="${m === metode ? 'on' : ''}">${m}</button>`).join('')}</div></div>
-    <div class="two">${field('Diskon (Rp)', '<input class="input" id="dk" type="number" inputmode="numeric" min="0" placeholder="0">')}
+    <div class="two">${field('Diskon (Rp)', `<input class="input money" id="dk" ${MONEY} placeholder="0">`)}
       ${field('Tanggal', `<input class="input" id="tg" type="date" value="${todayStr()}">`)}</div>
     ${custField()}
     ${field('Catatan (opsional)', '<input class="input" id="ct2" placeholder="Contoh: pedas, tanpa bawang">')}
     <div class="sum-row big"><span>Total bayar</span><span class="num" id="gt">${rp(sub)}</span></div>
     <div class="sheet-f" style="margin-top:14px"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Simpan penjualan</button></div>`);
   bindCust(ov);
-  const calc = () => { const dk = Math.min(Math.max(num($('#dk', ov).value), 0), sub); $('#gt', ov).textContent = rp(sub - dk); };
+  const calc = () => { const dk = Math.min(Math.max(numM($('#dk', ov).value), 0), sub); $('#gt', ov).textContent = rp(sub - dk); };
   $('#dk', ov).oninput = calc;
   $('#meth', ov).onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; metode = b.dataset.m; ov.querySelectorAll('#meth button').forEach(x => x.classList.toggle('on', x === b)); };
   $('#stt', ov).onclick = e => {
@@ -600,7 +626,7 @@ function checkout() {
   $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
     const cu = await readCust(ov, status !== 'Lunas');
     const r = await api('sell', {
-      tanggal: $('#tg', ov).value, pelanggan: cu.pelanggan, pelangganId: cu.pelangganId, metode, status, diskon: num($('#dk', ov).value), catatan: $('#ct2', ov).value,
+      tanggal: $('#tg', ov).value, pelanggan: cu.pelanggan, pelangganId: cu.pelangganId, metode, status, diskon: numM($('#dk', ov).value), catatan: $('#ct2', ov).value,
       items: lines.map(l => ({ id: l.p.ID, qty: l.q }))
     });
     state.cart = {}; close();
@@ -614,7 +640,7 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
   const blank = () => ({ id: '', qty: '', harga: '' });
   let rows = [blank()];
   const find = id => state.bahan.find(b => b.ID === id);
-  const price = r => withPrice ? num(r.harga) : (find(r.id) ? find(r.id).HargaRata : 0);
+  const price = r => withPrice ? numM(r.harga) : (find(r.id) ? find(r.id).HargaRata : 0);
   const subOf = r => num(r.qty) * price(r);
   const total = () => rows.reduce((s, r) => s + subOf(r), 0);
   const totals = () => { totalEl.textContent = rp(total()); if (onChange) onChange(total()); };
@@ -627,7 +653,7 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
           ${state.bahan.map(x => `<option value="${x.ID}" ${x.ID === r.id ? 'selected' : ''}>${esc(x.Nama)} (${esc(x.Satuan)})</option>`).join('')}</select>
         <input class="input" data-k="qty" type="number" inputmode="decimal" min="0" step="any" placeholder="Jumlah" value="${esc(r.qty)}" aria-label="Jumlah">
         ${withPrice
-          ? `<input class="input" data-k="harga" type="number" inputmode="numeric" min="0" step="any" placeholder="Harga per ${b ? esc(b.Satuan) : 'satuan'}" value="${esc(r.harga)}" aria-label="Harga satuan">`
+          ? `<input class="input money" data-k="harga" ${MONEY} placeholder="Harga per ${b ? esc(b.Satuan) : 'satuan'}" value="${fm(r.harga)}" aria-label="Harga satuan">`
           : `<div class="muted small cost">${b ? 'Harga rata-rata ' + rp(b.HargaRata) : ''}</div>`}
         <button type="button" class="icon-btn danger" data-del aria-label="Hapus baris">${icon('trash')}</button>
         <div class="hint">${b ? `Stok saat ini ${nf(b.Stok)} ${esc(b.Satuan)}` : ''}</div>
@@ -644,7 +670,7 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
   root.addEventListener('change', e => {
     const row = e.target.closest('.irow'); if (!row || e.target.dataset.k !== 'id') return;
     const r = rows[+row.dataset.i]; r.id = e.target.value;
-    const b = find(r.id); if (withPrice && b && !r.harga) r.harga = b.HargaRata || '';
+    const b = find(r.id); if (withPrice && b && !numM(r.harga)) r.harga = b.HargaRata || '';
     draw();
   });
   root.addEventListener('click', e => {
@@ -657,7 +683,7 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
     reset() { rows = [blank()]; draw(); },
     total,
     get() {
-      const out = rows.filter(r => r.id && num(r.qty) > 0).map(r => ({ id: r.id, qty: num(r.qty), harga: num(r.harga) }));
+      const out = rows.filter(r => r.id && num(r.qty) > 0).map(r => ({ id: r.id, qty: num(r.qty), harga: numM(r.harga) }));
       if (rows.some(r => (r.id && !(num(r.qty) > 0)) || (!r.id && num(r.qty) > 0))) throw new Error('Lengkapi bahan dan jumlah pada setiap baris');
       return out;
     }
@@ -762,19 +788,52 @@ async function pageProduksi() {
   $('#hist').innerHTML = txList(rows.slice(0, 15), 'Produksi');
 }
 
+/* ======================= PELANGGAN (menu sidebar) ======================= */
+async function pagePelanggan() {
+  const v = $('#view');
+  v.innerHTML = `<div class="ph"><div><h1>Pelanggan</h1><p>Daftar pelanggan tetap, riwayat belanja, dan utang yang belum dibayar.</p></div>
+    <button class="btn primary" id="new">${icon('plus')}Tambah pelanggan</button></div>
+    <div class="cards cols" id="list"><div class="skel"></div></div>`;
+  $('#new').onclick = () => formPelanggan();
+
+  const sum = await api('pelangganRingkas');
+  if (state.page !== 'pelanggan') return;
+  const list = $('#list');
+  const acts = (id, nm) => `<div class="acts"><button class="icon-btn" data-edit="${id}" aria-label="Ubah ${esc(nm)}">${icon('edit')}</button>
+        <button class="icon-btn danger" data-del="${id}" aria-label="Hapus ${esc(nm)}">${icon('trash')}</button></div>`;
+  list.innerHTML = sum.length ? sum.map(c => `<div class="mcard"><div class="body" data-detail="${c.id}"><div class="nm">${esc(c.nama)}</div>
+        <div class="meta">${c.hp ? esc(c.hp) + ', ' : ''}${nf(c.trx)} transaksi, total ${rp(c.total)}</div>
+        ${c.utang > 0 ? `<div style="margin-top:6px"><span class="badge warn">Belum dibayar ${rp(c.utang)}</span></div>` : ''}</div>${acts(c.id, c.nama)}</div>`).join('')
+    : '<div class="panel empty" style="grid-column:1/-1"><strong>Belum ada pelanggan tetap</strong>Simpan pelanggan langganan agar riwayat belanja dan utangnya mudah dilacak. Pembeli yang tidak tetap cukup dicatat sebagai pelanggan umum di Kasir.</div>';
+
+  list.onclick = async e => {
+    const ed = e.target.closest('[data-edit]'), dl = e.target.closest('[data-del]'), dt = e.target.closest('[data-detail]');
+    if (dt) return showCust(dt.dataset.detail);
+    if (ed) return formPelanggan(state.pelanggan.find(x => x.ID === ed.dataset.edit));
+    if (dl) {
+      const it = state.pelanggan.find(x => x.ID === dl.dataset.del); if (!it) return;
+      if (await ask('Hapus pelanggan?', `"${it.Nama}" akan dihapus dari daftar. Riwayat penjualan tetap tersimpan dengan nama pelanggan ini.`))
+        guard(null, async () => {
+          await api('deletePelanggan', { id: it.ID });
+          await loadMaster(); toast('Terhapus'); pagePelanggan();
+        });
+    }
+  };
+}
+
 /* ======================= STOK (MASTER) ======================= */
 let stokTab = 'bahan';
 async function pageStok() {
   const v = $('#view');
-  const tab = stokTab;
-  const TABS = [['bahan', 'Bahan baku', state.bahan.length], ['produk', 'Produk jadi', state.produk.length], ['pelanggan', 'Pelanggan', state.pelanggan.length]];
-  const addLabel = { bahan: 'Tambah bahan', produk: 'Tambah produk', pelanggan: 'Tambah pelanggan' }[tab];
-  v.innerHTML = `<div class="ph"><div><h1>Data</h1><p>Kelola bahan baku, produk yang dijual, dan pelanggan tetap.</p></div>
+  const tab = stokTab === 'produk' ? 'produk' : 'bahan';
+  const TABS = [['bahan', 'Bahan baku', state.bahan.length], ['produk', 'Produk jadi', state.produk.length]];
+  const addLabel = { bahan: 'Tambah bahan', produk: 'Tambah produk' }[tab];
+  v.innerHTML = `<div class="ph"><div><h1>Data</h1><p>Kelola bahan baku dan produk yang dijual.</p></div>
     <button class="btn primary" id="new">${icon('plus')}${addLabel}</button></div>
-    <div style="margin-bottom:14px"><div class="seg">${TABS.map(t => `<button data-t="${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]} (${t[2]})</button>`).join('')}</div></div>
-    <div class="cards cols" id="list">${tab === 'pelanggan' ? '<div class="skel"></div>' : ''}</div>`;
+    <div style="margin-bottom:14px"><div class="seg">${TABS.map(t => `<button data-t="${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]} (${nf(t[2])})</button>`).join('')}</div></div>
+    <div class="cards cols" id="list"></div>`;
   v.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { stokTab = b.dataset.t; pageStok(); });
-  $('#new').onclick = () => (tab === 'bahan' ? formBahan() : tab === 'produk' ? formProduk() : formPelanggan());
+  $('#new').onclick = () => (tab === 'bahan' ? formBahan() : formProduk());
 
   const list = $('#list');
   const acts = (id, nm) => `<div class="acts"><button class="icon-btn" data-edit="${id}" aria-label="Ubah ${esc(nm)}">${icon('edit')}</button>
@@ -787,37 +846,28 @@ async function pageStok() {
         <div class="meta">Stok <b class="num">${nf(b.Stok)} ${esc(b.Satuan)}</b>, rata-rata ${rp(b.HargaRata)} per ${esc(b.Satuan)}</div>
         ${low ? '<div style="margin-top:6px"><span class="badge warn">Perlu belanja</span></div>' : ''}</div>${acts(b.ID, b.Nama)}</div>`;
     }).join('') : '<div class="panel empty" style="grid-column:1/-1"><strong>Belum ada bahan</strong>Tambahkan bahan seperti beras, ayam, atau minyak goreng.</div>';
-  } else if (tab === 'produk') {
+  } else {
     list.innerHTML = state.produk.length ? state.produk.map(p => {
       const margin = p.HargaJual - p.HPP;
       return `<div class="mcard"><div class="body"><div class="nm">${esc(p.Nama)} <span class="badge">${esc(p.Kategori || 'Umum')}</span></div>
         <div class="meta">Jual <b class="num">${rp(p.HargaJual)}</b>, HPP ${rp(p.HPP)}, untung ${rp(margin)}</div>
         <div style="margin-top:6px"><span class="badge ${p.Stok <= 0 ? 'bad' : 'ok'}">Stok ${nf(p.Stok)}</span></div></div>${acts(p.ID, p.Nama)}</div>`;
     }).join('') : '<div class="panel empty" style="grid-column:1/-1"><strong>Belum ada produk</strong>Tambahkan menu yang akan dijual, misalnya nasi goreng atau es teh.</div>';
-  } else {
-    const sum = await api('pelangganRingkas');
-    if (stokTab !== 'pelanggan' || state.page !== 'stok') return;
-    list.innerHTML = sum.length ? sum.map(c => `<div class="mcard"><div class="body" data-detail="${c.id}"><div class="nm">${esc(c.nama)}</div>
-        <div class="meta">${c.hp ? esc(c.hp) + ', ' : ''}${c.trx} transaksi, total ${rp(c.total)}</div>
-        ${c.utang > 0 ? `<div style="margin-top:6px"><span class="badge warn">Belum dibayar ${rp(c.utang)}</span></div>` : ''}</div>${acts(c.id, c.nama)}</div>`).join('')
-      : '<div class="panel empty" style="grid-column:1/-1"><strong>Belum ada pelanggan tetap</strong>Simpan pelanggan langganan agar riwayat belanja dan utangnya mudah dilacak. Pembeli yang tidak tetap cukup dicatat sebagai pelanggan umum di Kasir.</div>';
   }
 
   list.onclick = async e => {
-    const ed = e.target.closest('[data-edit]'), dl = e.target.closest('[data-del]'), dt = e.target.closest('[data-detail]');
-    const coll = tab === 'bahan' ? state.bahan : tab === 'produk' ? state.produk : state.pelanggan;
-    if (dt) return showCust(dt.dataset.detail);
+    const ed = e.target.closest('[data-edit]'), dl = e.target.closest('[data-del]');
+    const coll = tab === 'bahan' ? state.bahan : state.produk;
     if (ed) {
       const it = coll.find(x => x.ID === ed.dataset.edit);
-      return tab === 'bahan' ? formBahan(it) : tab === 'produk' ? formProduk(it) : formPelanggan(it);
+      return tab === 'bahan' ? formBahan(it) : formProduk(it);
     }
     if (dl) {
       const it = coll.find(x => x.ID === dl.dataset.del);
-      const label = tab === 'bahan' ? 'bahan' : tab === 'produk' ? 'produk' : 'pelanggan';
-      const note = tab === 'pelanggan' ? 'Riwayat penjualan tetap tersimpan dengan nama pelanggan ini.' : 'Riwayat transaksi tidak ikut terhapus.';
-      if (await ask('Hapus ' + label + '?', `"${it.Nama}" akan dihapus dari daftar. ${note}`))
+      const label = tab === 'bahan' ? 'bahan' : 'produk';
+      if (await ask('Hapus ' + label + '?', `"${it.Nama}" akan dihapus dari daftar. Riwayat transaksi tidak ikut terhapus.`))
         guard(null, async () => {
-          await api(tab === 'bahan' ? 'deleteBahan' : tab === 'produk' ? 'deleteProduk' : 'deletePelanggan', { id: it.ID });
+          await api(tab === 'bahan' ? 'deleteBahan' : 'deleteProduk', { id: it.ID });
           await loadMaster(); toast('Terhapus'); pageStok();
         });
     }
@@ -832,7 +882,7 @@ function formPelanggan(c) {
     <div class="sheet-f"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Simpan</button></div>`);
   $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
     await api('savePelanggan', { id: c?.ID, nama: $('#n', ov).value, hp: $('#h', ov).value, catatan: $('#c', ov).value });
-    close(); await loadMaster(); toast('Pelanggan tersimpan'); pageStok();
+    close(); await loadMaster(); toast('Pelanggan tersimpan'); pagePelanggan();
   });
 }
 
@@ -863,7 +913,7 @@ async function showCust(id) {
   ov.addEventListener('click', e => {
     const b = e.target.closest('[data-pay]'); if (!b) return;
     const r = rows.find(x => x.ID === b.dataset.pay); if (!r) return;
-    paySale(r, async () => { close(); await pageStok(); showCust(id); });
+    paySale(r, async () => { close(); await pagePelanggan(); showCust(id); });
   });
 }
 
@@ -873,11 +923,11 @@ function formBahan(b) {
     <div class="two">${field('Satuan', `<input class="input" id="s" list="sat" value="${esc(b?.Satuan)}" placeholder="kg">
         <datalist id="sat">${['kg', 'gram', 'liter', 'ml', 'pcs', 'butir', 'pack', 'ikat'].map(x => `<option>${x}</option>`).join('')}</datalist>`)}
       ${field('Stok saat ini', `<input class="input" id="st" type="number" inputmode="decimal" step="any" min="0" value="${b ? b.Stok : ''}" placeholder="0">`, b ? 'Ubah hanya untuk koreksi hasil stok opname.' : '')}</div>
-    <div class="two">${field('Harga per satuan (Rp)', `<input class="input" id="h" type="number" inputmode="numeric" min="0" value="${b ? b.HargaRata : ''}" placeholder="0">`)}
+    <div class="two">${field('Harga per satuan (Rp)', `<input class="input money" id="h" ${MONEY} value="${b ? fm(b.HargaRata) : ''}" placeholder="0">`)}
       ${field('Batas stok minimum', `<input class="input" id="m" type="number" inputmode="decimal" step="any" min="0" value="${b ? b.StokMin : ''}" placeholder="0">`, 'Muncul peringatan jika stok di bawah angka ini.')}</div>
     <div class="sheet-f"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Simpan</button></div>`);
   $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
-    await api('saveBahan', { id: b?.ID, nama: $('#n', ov).value, satuan: $('#s', ov).value, stok: $('#st', ov).value, harga: $('#h', ov).value, stokMin: $('#m', ov).value });
+    await api('saveBahan', { id: b?.ID, nama: $('#n', ov).value, satuan: $('#s', ov).value, stok: $('#st', ov).value, harga: numM($('#h', ov).value), stokMin: $('#m', ov).value });
     close(); await loadMaster(); toast('Bahan tersimpan'); pageStok();
   });
 }
@@ -887,12 +937,12 @@ function formProduk(p) {
     ${field('Nama produk', `<input class="input" id="n" value="${esc(p?.Nama)}" placeholder="Contoh: Nasi goreng spesial">`)}
     ${field('Kategori', `<input class="input" id="k" list="cats" value="${esc(p?.Kategori)}" placeholder="Makanan, Minuman, Snack">
       <datalist id="cats">${[...new Set(['Makanan', 'Minuman', 'Snack', ...cats])].map(x => `<option>${esc(x)}</option>`).join('')}</datalist>`)}
-    <div class="two">${field('Harga jual (Rp)', `<input class="input" id="hj" type="number" inputmode="numeric" min="0" value="${p ? p.HargaJual : ''}" placeholder="0">`)}
+    <div class="two">${field('Harga jual (Rp)', `<input class="input money" id="hj" ${MONEY} value="${p ? fm(p.HargaJual) : ''}" placeholder="0">`)}
       ${field('Stok (porsi)', `<input class="input" id="st" type="number" inputmode="decimal" step="any" min="0" value="${p ? p.Stok : ''}" placeholder="0">`)}</div>
-    ${field('HPP per porsi (Rp)', `<input class="input" id="hp" type="number" inputmode="numeric" min="0" value="${p ? p.HPP : ''}" placeholder="0">`, 'Modal per porsi. Akan dihitung ulang otomatis setiap kali Anda mencatat produksi.')}
+    ${field('HPP per porsi (Rp)', `<input class="input money" id="hp" ${MONEY} value="${p ? fm(p.HPP) : ''}" placeholder="0">`, 'Modal per porsi. Akan dihitung ulang otomatis setiap kali Anda mencatat produksi.')}
     <div class="sheet-f"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Simpan</button></div>`);
   $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
-    await api('saveProduk', { id: p?.ID, nama: $('#n', ov).value, kategori: $('#k', ov).value, hargaJual: $('#hj', ov).value, hpp: $('#hp', ov).value, stok: $('#st', ov).value });
+    await api('saveProduk', { id: p?.ID, nama: $('#n', ov).value, kategori: $('#k', ov).value, hargaJual: numM($('#hj', ov).value), hpp: numM($('#hp', ov).value), stok: $('#st', ov).value });
     close(); await loadMaster(); toast('Produk tersimpan'); pageStok();
   });
 }
@@ -1006,7 +1056,7 @@ function editSale(r) {
     <h3 style="margin-bottom:10px">Item pesanan</h3>
     <div id="eri"></div>
     <button class="btn ghost sm" id="eadd" style="margin-bottom:16px">${icon('plus')}Tambah menu</button>
-    <div class="two">${field('Diskon (Rp)', `<input class="input" id="dk" type="number" inputmode="numeric" min="0" value="${r.Diskon || ''}" placeholder="0">`)}
+    <div class="two">${field('Diskon (Rp)', `<input class="input money" id="dk" ${MONEY} value="${fm(r.Diskon)}" placeholder="0">`)}
       ${field('Catatan', `<input class="input" id="ct" value="${esc(r.Catatan)}">`)}</div>
     <div class="field"><label>Status pembayaran</label><div class="methods" style="grid-template-columns:1fr 1fr" id="stt">
       <button type="button" data-s="Lunas" class="${status === 'Lunas' ? 'on' : ''}">Lunas</button>
@@ -1017,8 +1067,8 @@ function editSale(r) {
 
   bindCust(ov);
   const calc = () => {
-    const sub = items.reduce((s, it) => s + num(it.qty) * num(it.harga), 0);
-    const dk = Math.min(Math.max(num($('#dk', ov).value), 0), sub);
+    const sub = items.reduce((s, it) => s + num(it.qty) * numM(it.harga), 0);
+    const dk = Math.min(Math.max(numM($('#dk', ov).value), 0), sub);
     $('#gt', ov).textContent = rp(sub - dk);
   };
   const draw = () => {
@@ -1026,16 +1076,16 @@ function editSale(r) {
       <select class="select" data-k="id" aria-label="Pilih menu"><option value="">Pilih menu</option>
         ${state.produk.map(p => `<option value="${p.ID}" ${p.ID === it.id ? 'selected' : ''}>${esc(p.Nama)}</option>`).join('')}</select>
       <input class="input" data-k="qty" type="number" inputmode="decimal" min="0" step="any" placeholder="Jumlah" value="${esc(it.qty)}" aria-label="Jumlah">
-      <input class="input" data-k="harga" type="number" inputmode="numeric" min="0" step="any" placeholder="Harga" value="${esc(it.harga)}" aria-label="Harga satuan">
+      <input class="input money" data-k="harga" ${MONEY} placeholder="Harga" value="${fm(it.harga)}" aria-label="Harga satuan">
       <button type="button" class="icon-btn danger" data-del aria-label="Hapus baris">${icon('trash')}</button>
-      <div class="isub num" data-sub>${rp(num(it.qty) * num(it.harga))}</div></div>`).join('');
+      <div class="isub num" data-sub>${rp(num(it.qty) * numM(it.harga))}</div></div>`).join('');
     calc();
   };
   const box = $('#eri', ov);
   box.addEventListener('input', e => {
     const row = e.target.closest('.irow'), k = e.target.dataset.k; if (!row || !k || k === 'id') return;
     const it = items[+row.dataset.i]; it[k] = e.target.value;
-    row.querySelector('[data-sub]').textContent = rp(num(it.qty) * num(it.harga)); calc();
+    row.querySelector('[data-sub]').textContent = rp(num(it.qty) * numM(it.harga)); calc();
   });
   box.addEventListener('change', e => {
     const row = e.target.closest('.irow'); if (!row || e.target.dataset.k !== 'id') return;
@@ -1063,9 +1113,9 @@ function editSale(r) {
     if (items.some(it => !it.id || !(num(it.qty) > 0))) throw new Error('Lengkapi menu dan jumlah pada setiap baris');
     const cu = await readCust(ov, status !== 'Lunas');
     await api('updateSale', {
-      id: r.ID, tanggal: $('#tg', ov).value, pelanggan: cu.pelanggan, pelangganId: cu.pelangganId, diskon: num($('#dk', ov).value),
+      id: r.ID, tanggal: $('#tg', ov).value, pelanggan: cu.pelanggan, pelangganId: cu.pelangganId, diskon: numM($('#dk', ov).value),
       catatan: $('#ct', ov).value, status, metode,
-      items: items.map(it => ({ id: it.id, qty: num(it.qty), harga: num(it.harga), hpp: it.hpp }))
+      items: items.map(it => ({ id: it.id, qty: num(it.qty), harga: numM(it.harga), hpp: it.hpp }))
     });
     close(); await loadMaster(); toast('Perubahan tersimpan'); pageLaporan();
   });
