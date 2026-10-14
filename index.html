@@ -237,6 +237,7 @@ details.tx .det{padding:0 16px 14px;border-top:1px solid var(--line-2)}
   background:var(--amber-50);border:1px solid #F0D894;border-radius:var(--r-lg);padding:14px 16px;margin-top:12px;color:var(--ink)}
 .piutang b{display:block}
 .piutang span.s{font-size:13px;color:var(--amber)}
+.mcard .body[data-detail]{cursor:pointer}
 
 /* ======================= LOGIN ======================= */
 .login{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;padding:20px;overflow:auto}
@@ -303,7 +304,7 @@ const LOGO = '<svg viewBox="0 0 24 24"><path d="M5 13h14a7 7 0 0 1-14 0z"/><path
 
 /* ======================= STATE & API ======================= */
 const cfg = { url: API_URL || store.get('dk_url'), pin: store.get('dk_pin') };
-const state = { bahan: [], produk: [], cart: {}, page: 'dashboard' };
+const state = { bahan: [], produk: [], pelanggan: [], cart: {}, page: 'dashboard' };
 let busy = 0;
 function loading(on) {
   busy += on ? 1 : -1;
@@ -328,7 +329,7 @@ async function api(action, data = {}) {
 }
 async function loadMaster() {
   const m = await api('master');
-  state.bahan = m.bahan; state.produk = m.produk;
+  state.bahan = m.bahan; state.produk = m.produk; state.pelanggan = m.pelanggan || [];
 }
 function toast(msg, err) {
   const t = document.createElement('div');
@@ -396,7 +397,7 @@ function logout() { store.del('dk_pin'); cfg.pin = ''; showLogin(); }
 /* ======================= SHELL ======================= */
 const NAV = [
   ['dashboard', 'Beranda', 'home'], ['kasir', 'Kasir', 'cart'], ['beli', 'Pembelian', 'bag'],
-  ['produksi', 'Produksi', 'flame'], ['stok', 'Stok', 'box'], ['laporan', 'Laporan', 'chart']
+  ['produksi', 'Produksi', 'flame'], ['stok', 'Data', 'box'], ['laporan', 'Laporan', 'chart']
 ];
 const PAGES = { dashboard: pageDashboard, kasir: pageKasir, beli: pageBeli, produksi: pageProduksi, stok: pageStok, laporan: pageLaporan };
 
@@ -432,6 +433,38 @@ function render() {
 }
 
 const methodBtns = sel => ['Tunai', 'QRIS', 'Transfer'].map(m => `<button type="button" data-m="${m}" class="${m === sel ? 'on' : ''}">${m}</button>`).join('');
+const normN = v => String(v ?? '').trim().toLowerCase();
+const waNumber = hp => { let d = String(hp || '').replace(/\D/g, ''); if (d.startsWith('0')) d = '62' + d.slice(1); else if (d.startsWith('8')) d = '62' + d; return d; };
+
+/* Pemilih pelanggan: umum / pelanggan tetap / pelanggan tetap baru */
+function custField(r) {
+  const sel = r && r.PelangganID && state.pelanggan.some(c => c.ID === r.PelangganID) ? r.PelangganID : '';
+  const free = sel ? '' : ((r && r.Pelanggan) || '');
+  return `<div class="field"><label>Pelanggan</label>
+      <select class="select" id="cu"><option value="">Pelanggan umum</option>
+        ${state.pelanggan.map(c => `<option value="${c.ID}" ${c.ID === sel ? 'selected' : ''}>${esc(c.Nama)}</option>`).join('')}
+        <option value="__new">+ Pelanggan tetap baru</option></select></div>
+    <div id="cu-u" ${sel ? 'hidden' : ''}>${field('Nama (opsional)', `<input class="input" id="pl" value="${esc(free)}" placeholder="Contoh: Bu Rina">`)}</div>
+    <div id="cu-n" class="two" hidden>${field('Nama pelanggan', '<input class="input" id="nn" placeholder="Nama lengkap">')}
+      ${field('No. HP (opsional)', '<input class="input" id="nh" type="tel" inputmode="tel" placeholder="08xxxxxxxxxx">')}</div>`;
+}
+function bindCust(ov) {
+  $('#cu', ov).onchange = e => { const v = e.target.value; $('#cu-u', ov).hidden = v !== ''; $('#cu-n', ov).hidden = v !== '__new'; };
+}
+async function readCust(ov, needName) {
+  const v = $('#cu', ov).value;
+  if (v === '__new') {
+    const nama = $('#nn', ov).value.trim();
+    if (!nama) throw new Error('Isi nama pelanggan baru');
+    const r = await api('savePelanggan', { nama, hp: $('#nh', ov).value });
+    return { pelangganId: r.id, pelanggan: nama };
+  }
+  if (v) return { pelangganId: v, pelanggan: '' };
+  const nm = $('#pl', ov).value.trim();
+  if (needName && !nm) throw new Error('Isi nama pelanggan untuk penjualan yang belum lunas, atau pilih pelanggan tetap');
+  return { pelangganId: '', pelanggan: nm };
+}
+
 function goLaporan(filter, from) {
   lap.sheet = 'Penjualan'; lap.filter = filter; lap.from = from; lap.to = todayStr();
   location.hash = '#/laporan';
@@ -499,7 +532,7 @@ function pageKasir() {
     <div class="chips" id="chips"></div><div class="grid" id="pgrid"></div>
     <div class="cartbar" id="cartbar" hidden><div><div class="n" id="cn"></div><div class="t num" id="ct"></div></div>
       <button class="btn" id="pay">Bayar</button></div>`
-    : `<div class="panel empty"><strong>Belum ada menu</strong>Tambahkan produk dulu di halaman Stok agar bisa dijual.
+    : `<div class="panel empty"><strong>Belum ada menu</strong>Tambahkan produk dulu di halaman Data agar bisa dijual.
        <br><button class="btn primary" onclick="location.hash='#/stok'">Tambah produk</button></div>`}`;
   $('#hist').onclick = () => goLaporan('semua', todayStr());
   if (!state.produk.length) return;
@@ -551,10 +584,11 @@ function checkout() {
       ${['Tunai', 'QRIS', 'Transfer'].map(m => `<button type="button" data-m="${m}" class="${m === metode ? 'on' : ''}">${m}</button>`).join('')}</div></div>
     <div class="two">${field('Diskon (Rp)', '<input class="input" id="dk" type="number" inputmode="numeric" min="0" placeholder="0">')}
       ${field('Tanggal', `<input class="input" id="tg" type="date" value="${todayStr()}">`)}</div>
-    ${field('Nama pelanggan (opsional)', '<input class="input" id="pl" placeholder="Contoh: Bu Rina">')}
+    ${custField()}
     ${field('Catatan (opsional)', '<input class="input" id="ct2" placeholder="Contoh: pedas, tanpa bawang">')}
     <div class="sum-row big"><span>Total bayar</span><span class="num" id="gt">${rp(sub)}</span></div>
     <div class="sheet-f" style="margin-top:14px"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Simpan penjualan</button></div>`);
+  bindCust(ov);
   const calc = () => { const dk = Math.min(Math.max(num($('#dk', ov).value), 0), sub); $('#gt', ov).textContent = rp(sub - dk); };
   $('#dk', ov).oninput = calc;
   $('#meth', ov).onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; metode = b.dataset.m; ov.querySelectorAll('#meth button').forEach(x => x.classList.toggle('on', x === b)); };
@@ -564,8 +598,9 @@ function checkout() {
     $('#mf', ov).hidden = status !== 'Lunas';
   };
   $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
+    const cu = await readCust(ov, status !== 'Lunas');
     const r = await api('sell', {
-      tanggal: $('#tg', ov).value, pelanggan: $('#pl', ov).value, metode, status, diskon: num($('#dk', ov).value), catatan: $('#ct2', ov).value,
+      tanggal: $('#tg', ov).value, pelanggan: cu.pelanggan, pelangganId: cu.pelangganId, metode, status, diskon: num($('#dk', ov).value), catatan: $('#ct2', ov).value,
       items: lines.map(l => ({ id: l.p.ID, qty: l.q }))
     });
     state.cart = {}; close();
@@ -659,7 +694,7 @@ function txList(rows, kind) {
 async function pageBeli() {
   const v = $('#view');
   v.innerHTML = `<div class="ph"><div><h1>Pembelian bahan</h1><p>Catat belanja bahan baku. Stok dan harga rata-rata bahan diperbarui otomatis.</p></div></div>
-  ${!state.bahan.length ? `<div class="panel empty"><strong>Belum ada data bahan</strong>Tambahkan daftar bahan dulu di halaman Stok.
+  ${!state.bahan.length ? `<div class="panel empty"><strong>Belum ada data bahan</strong>Tambahkan daftar bahan dulu di halaman Data.
     <br><button class="btn primary" onclick="location.hash='#/stok'">Tambah bahan</button></div>` : `
   <section class="panel">
     <div class="two">${field('Tanggal', `<input class="input" id="tg" type="date" value="${todayStr()}">`)}
@@ -693,7 +728,7 @@ async function pageProduksi() {
   const ready = state.bahan.length && state.produk.length;
   v.innerHTML = `<div class="ph"><div><h1>Produksi</h1><p>Ubah bahan menjadi makanan jadi. Stok bahan berkurang, stok produk bertambah, dan HPP dihitung otomatis.</p></div></div>
   ${!ready ? `<div class="panel empty"><strong>Data belum lengkap</strong>Produksi membutuhkan minimal satu bahan dan satu produk.
-    <br><button class="btn primary" onclick="location.hash='#/stok'">Buka halaman Stok</button></div>` : `
+    <br><button class="btn primary" onclick="location.hash='#/stok'">Buka halaman Data</button></div>` : `
   <section class="panel">
     <div class="two">${field('Produk yang dibuat', `<select class="select" id="pr"><option value="">Pilih produk</option>${state.produk.map(p => `<option value="${p.ID}">${esc(p.Nama)}</option>`).join('')}</select>`)}
       ${field('Jumlah hasil (porsi)', '<input class="input" id="qt" type="number" inputmode="decimal" min="0" step="any" placeholder="Contoh: 20">')}</div>
@@ -729,46 +764,107 @@ async function pageProduksi() {
 
 /* ======================= STOK (MASTER) ======================= */
 let stokTab = 'bahan';
-function pageStok() {
+async function pageStok() {
   const v = $('#view');
-  const isB = stokTab === 'bahan';
-  v.innerHTML = `<div class="ph"><div><h1>Stok</h1><p>Kelola daftar bahan baku dan produk yang dijual.</p></div>
-    <button class="btn primary" id="new">${icon('plus')}${isB ? 'Tambah bahan' : 'Tambah produk'}</button></div>
-    <div style="margin-bottom:14px"><div class="seg"><button data-t="bahan" class="${isB ? 'on' : ''}">Bahan baku (${state.bahan.length})</button>
-      <button data-t="produk" class="${!isB ? 'on' : ''}">Produk jadi (${state.produk.length})</button></div></div>
-    <div class="cards cols" id="list"></div>`;
+  const tab = stokTab;
+  const TABS = [['bahan', 'Bahan baku', state.bahan.length], ['produk', 'Produk jadi', state.produk.length], ['pelanggan', 'Pelanggan', state.pelanggan.length]];
+  const addLabel = { bahan: 'Tambah bahan', produk: 'Tambah produk', pelanggan: 'Tambah pelanggan' }[tab];
+  v.innerHTML = `<div class="ph"><div><h1>Data</h1><p>Kelola bahan baku, produk yang dijual, dan pelanggan tetap.</p></div>
+    <button class="btn primary" id="new">${icon('plus')}${addLabel}</button></div>
+    <div style="margin-bottom:14px"><div class="seg">${TABS.map(t => `<button data-t="${t[0]}" class="${t[0] === tab ? 'on' : ''}">${t[1]} (${t[2]})</button>`).join('')}</div></div>
+    <div class="cards cols" id="list">${tab === 'pelanggan' ? '<div class="skel"></div>' : ''}</div>`;
   v.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { stokTab = b.dataset.t; pageStok(); });
-  $('#new').onclick = () => (isB ? formBahan() : formProduk());
+  $('#new').onclick = () => (tab === 'bahan' ? formBahan() : tab === 'produk' ? formProduk() : formPelanggan());
 
   const list = $('#list');
-  if (isB) {
+  const acts = (id, nm) => `<div class="acts"><button class="icon-btn" data-edit="${id}" aria-label="Ubah ${esc(nm)}">${icon('edit')}</button>
+        <button class="icon-btn danger" data-del="${id}" aria-label="Hapus ${esc(nm)}">${icon('trash')}</button></div>`;
+
+  if (tab === 'bahan') {
     list.innerHTML = state.bahan.length ? state.bahan.map(b => {
       const low = b.StokMin > 0 && b.Stok <= b.StokMin;
       return `<div class="mcard"><div class="body"><div class="nm">${esc(b.Nama)}</div>
         <div class="meta">Stok <b class="num">${nf(b.Stok)} ${esc(b.Satuan)}</b>, rata-rata ${rp(b.HargaRata)} per ${esc(b.Satuan)}</div>
-        ${low ? '<div style="margin-top:6px"><span class="badge warn">Perlu belanja</span></div>' : ''}</div>
-        <div class="acts"><button class="icon-btn" data-edit="${b.ID}" aria-label="Ubah ${esc(b.Nama)}">${icon('edit')}</button>
-        <button class="icon-btn danger" data-del="${b.ID}" aria-label="Hapus ${esc(b.Nama)}">${icon('trash')}</button></div></div>`;
+        ${low ? '<div style="margin-top:6px"><span class="badge warn">Perlu belanja</span></div>' : ''}</div>${acts(b.ID, b.Nama)}</div>`;
     }).join('') : '<div class="panel empty" style="grid-column:1/-1"><strong>Belum ada bahan</strong>Tambahkan bahan seperti beras, ayam, atau minyak goreng.</div>';
-  } else {
+  } else if (tab === 'produk') {
     list.innerHTML = state.produk.length ? state.produk.map(p => {
       const margin = p.HargaJual - p.HPP;
       return `<div class="mcard"><div class="body"><div class="nm">${esc(p.Nama)} <span class="badge">${esc(p.Kategori || 'Umum')}</span></div>
         <div class="meta">Jual <b class="num">${rp(p.HargaJual)}</b>, HPP ${rp(p.HPP)}, untung ${rp(margin)}</div>
-        <div style="margin-top:6px"><span class="badge ${p.Stok <= 0 ? 'bad' : 'ok'}">Stok ${nf(p.Stok)}</span></div></div>
-        <div class="acts"><button class="icon-btn" data-edit="${p.ID}" aria-label="Ubah ${esc(p.Nama)}">${icon('edit')}</button>
-        <button class="icon-btn danger" data-del="${p.ID}" aria-label="Hapus ${esc(p.Nama)}">${icon('trash')}</button></div></div>`;
+        <div style="margin-top:6px"><span class="badge ${p.Stok <= 0 ? 'bad' : 'ok'}">Stok ${nf(p.Stok)}</span></div></div>${acts(p.ID, p.Nama)}</div>`;
     }).join('') : '<div class="panel empty" style="grid-column:1/-1"><strong>Belum ada produk</strong>Tambahkan menu yang akan dijual, misalnya nasi goreng atau es teh.</div>';
+  } else {
+    const sum = await api('pelangganRingkas');
+    if (stokTab !== 'pelanggan' || state.page !== 'stok') return;
+    list.innerHTML = sum.length ? sum.map(c => `<div class="mcard"><div class="body" data-detail="${c.id}"><div class="nm">${esc(c.nama)}</div>
+        <div class="meta">${c.hp ? esc(c.hp) + ', ' : ''}${c.trx} transaksi, total ${rp(c.total)}</div>
+        ${c.utang > 0 ? `<div style="margin-top:6px"><span class="badge warn">Belum dibayar ${rp(c.utang)}</span></div>` : ''}</div>${acts(c.id, c.nama)}</div>`).join('')
+      : '<div class="panel empty" style="grid-column:1/-1"><strong>Belum ada pelanggan tetap</strong>Simpan pelanggan langganan agar riwayat belanja dan utangnya mudah dilacak. Pembeli yang tidak tetap cukup dicatat sebagai pelanggan umum di Kasir.</div>';
   }
+
   list.onclick = async e => {
-    const ed = e.target.closest('[data-edit]'), dl = e.target.closest('[data-del]');
-    if (ed) return isB ? formBahan(state.bahan.find(x => x.ID === ed.dataset.edit)) : formProduk(state.produk.find(x => x.ID === ed.dataset.edit));
+    const ed = e.target.closest('[data-edit]'), dl = e.target.closest('[data-del]'), dt = e.target.closest('[data-detail]');
+    const coll = tab === 'bahan' ? state.bahan : tab === 'produk' ? state.produk : state.pelanggan;
+    if (dt) return showCust(dt.dataset.detail);
+    if (ed) {
+      const it = coll.find(x => x.ID === ed.dataset.edit);
+      return tab === 'bahan' ? formBahan(it) : tab === 'produk' ? formProduk(it) : formPelanggan(it);
+    }
     if (dl) {
-      const item = (isB ? state.bahan : state.produk).find(x => x.ID === dl.dataset.del);
-      if (await ask('Hapus ' + (isB ? 'bahan' : 'produk') + '?', `"${item.Nama}" akan dihapus dari daftar. Riwayat transaksi tidak ikut terhapus.`))
-        guard(null, async () => { await api(isB ? 'deleteBahan' : 'deleteProduk', { id: item.ID }); await loadMaster(); toast('Terhapus'); pageStok(); });
+      const it = coll.find(x => x.ID === dl.dataset.del);
+      const label = tab === 'bahan' ? 'bahan' : tab === 'produk' ? 'produk' : 'pelanggan';
+      const note = tab === 'pelanggan' ? 'Riwayat penjualan tetap tersimpan dengan nama pelanggan ini.' : 'Riwayat transaksi tidak ikut terhapus.';
+      if (await ask('Hapus ' + label + '?', `"${it.Nama}" akan dihapus dari daftar. ${note}`))
+        guard(null, async () => {
+          await api(tab === 'bahan' ? 'deleteBahan' : tab === 'produk' ? 'deleteProduk' : 'deletePelanggan', { id: it.ID });
+          await loadMaster(); toast('Terhapus'); pageStok();
+        });
     }
   };
+}
+
+function formPelanggan(c) {
+  const { ov, close } = modal(c ? 'Ubah pelanggan' : 'Tambah pelanggan', `
+    ${field('Nama pelanggan', `<input class="input" id="n" value="${esc(c?.Nama)}" placeholder="Contoh: Bu Rina">`)}
+    ${field('No. HP / WhatsApp', `<input class="input" id="h" type="tel" inputmode="tel" value="${esc(c?.HP)}" placeholder="08xxxxxxxxxx">`, 'Dipakai untuk menagih lewat WhatsApp.')}
+    ${field('Catatan (opsional)', `<input class="input" id="c" value="${esc(c?.Catatan)}" placeholder="Contoh: pesan katering tiap Jumat">`)}
+    <div class="sheet-f"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Simpan</button></div>`);
+  $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
+    await api('savePelanggan', { id: c?.ID, nama: $('#n', ov).value, hp: $('#h', ov).value, catatan: $('#c', ov).value });
+    close(); await loadMaster(); toast('Pelanggan tersimpan'); pageStok();
+  });
+}
+
+async function showCust(id) {
+  const c = state.pelanggan.find(x => x.ID === id); if (!c) return;
+  const rows = await api('list', { sheet: 'Penjualan', from: '2020-01-01', to: todayStr(), pelangganId: id });
+  const unpaid = rows.filter(r => r.Status === 'Belum Lunas');
+  const tot = rows.reduce((s, r) => s + num(r.Total), 0), utang = unpaid.reduce((s, r) => s + num(r.Total), 0);
+  const { ov, close } = modal(c.Nama, `
+    ${c.HP || c.Catatan ? `<div class="muted small" style="margin:-6px 0 12px">${[c.HP, c.Catatan].filter(Boolean).map(esc).join(', ')}</div>` : ''}
+    <div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+      <div class="stat"><div class="l">Total belanja</div><div class="v num">${rp(tot)}</div><div class="s">${rows.length} transaksi</div></div>
+      <div class="stat"><div class="l">Belum dibayar</div><div class="v num">${rp(utang)}</div><div class="s">${unpaid.length} transaksi</div></div></div>
+    ${utang > 0 ? (c.HP ? `<button class="btn primary block" id="wa" style="margin-bottom:14px">Tagih lewat WhatsApp</button>`
+        : `<div class="hint" style="margin-bottom:14px">Tambahkan nomor HP pelanggan agar bisa menagih lewat WhatsApp.</div>`) : ''}
+    <h3 style="margin:4px 0 6px">Riwayat pembelian</h3>
+    <div>${rows.length ? rows.slice(0, 30).map(r => `<div class="lrow"><div class="t">${fmtTgl(r.Tanggal)}
+        <div class="small muted">${(r.Items || []).map(i => nf(i.qty) + ' ' + esc(i.nama)).join(', ')}</div></div>
+        <div class="r"><div class="num">${rp(r.Total)}</div>
+        ${r.Status === 'Belum Lunas' ? `<button class="btn sm primary" data-pay="${esc(r.ID)}" style="margin-top:6px">Tandai lunas</button>` : '<span class="badge ok">Lunas</span>'}</div></div>`).join('')
+      : '<div class="empty" style="padding:18px 0">Belum ada pembelian.</div>'}</div>`);
+  const wa = $('#wa', ov);
+  if (wa) wa.onclick = () => {
+    const lines = unpaid.slice(0, 10).map(r => `- ${fmtTgl(r.Tanggal).split(',')[0]}: ${rp(r.Total)}`).join('\n');
+    const msg = `Halo ${c.Nama}, kami mengingatkan ada ${unpaid.length} transaksi yang belum dibayar dengan total ${rp(utang)}:\n${lines}\nMohon konfirmasi pembayarannya. Terima kasih.`;
+    window.open(`https://wa.me/${waNumber(c.HP)}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+  };
+  ov.addEventListener('click', e => {
+    const b = e.target.closest('[data-pay]'); if (!b) return;
+    const r = rows.find(x => x.ID === b.dataset.pay); if (!r) return;
+    paySale(r, async () => { close(); await pageStok(); showCust(id); });
+  });
 }
 
 function formBahan(b) {
@@ -885,7 +981,7 @@ async function pageLaporan() {
 }
 
 /* ---------- Tandai lunas ---------- */
-function paySale(r) {
+function paySale(r, after) {
   let metode = 'Tunai';
   const { ov, close } = modal('Tandai lunas', `
     <div class="sum-row"><span>${esc(r.Pelanggan || 'Pelanggan umum')}</span><b class="num">${rp(r.Total)}</b></div>
@@ -895,7 +991,7 @@ function paySale(r) {
   $('#meth', ov).onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; metode = b.dataset.m; ov.querySelectorAll('#meth button').forEach(x => x.classList.toggle('on', x === b)); };
   $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
     await api('markPaid', { id: r.ID, metode, tanggal: $('#tg', ov).value });
-    close(); toast('Penjualan ditandai lunas'); pageLaporan();
+    close(); toast('Penjualan ditandai lunas'); (after || pageLaporan)();
   });
 }
 
@@ -905,8 +1001,8 @@ function editSale(r) {
   let status = r.Status === 'Belum Lunas' ? 'Belum Lunas' : 'Lunas';
   let metode = ['Tunai', 'QRIS', 'Transfer'].includes(r.Metode) ? r.Metode : 'Tunai';
   const { ov, close } = modal('Ubah penjualan', `
-    <div class="two">${field('Tanggal', `<input class="input" id="tg" type="date" value="${esc(String(r.Tanggal).slice(0, 10))}">`)}
-      ${field('Pelanggan', `<input class="input" id="pl" value="${esc(r.Pelanggan)}" placeholder="Pelanggan umum">`)}</div>
+    ${field('Tanggal', `<input class="input" id="tg" type="date" value="${esc(String(r.Tanggal).slice(0, 10))}">`)}
+    ${custField(r)}
     <h3 style="margin-bottom:10px">Item pesanan</h3>
     <div id="eri"></div>
     <button class="btn ghost sm" id="eadd" style="margin-bottom:16px">${icon('plus')}Tambah menu</button>
@@ -919,6 +1015,7 @@ function editSale(r) {
     <div class="sum-row big"><span>Total</span><span class="num" id="gt"></span></div>
     <div class="sheet-f" style="margin-top:14px"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Simpan perubahan</button></div>`);
 
+  bindCust(ov);
   const calc = () => {
     const sub = items.reduce((s, it) => s + num(it.qty) * num(it.harga), 0);
     const dk = Math.min(Math.max(num($('#dk', ov).value), 0), sub);
@@ -964,8 +1061,9 @@ function editSale(r) {
   $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
     if (!items.length) throw new Error('Tambahkan minimal satu menu, atau gunakan Hapus untuk membatalkan penjualan');
     if (items.some(it => !it.id || !(num(it.qty) > 0))) throw new Error('Lengkapi menu dan jumlah pada setiap baris');
+    const cu = await readCust(ov, status !== 'Lunas');
     await api('updateSale', {
-      id: r.ID, tanggal: $('#tg', ov).value, pelanggan: $('#pl', ov).value, diskon: num($('#dk', ov).value),
+      id: r.ID, tanggal: $('#tg', ov).value, pelanggan: cu.pelanggan, pelangganId: cu.pelangganId, diskon: num($('#dk', ov).value),
       catatan: $('#ct', ov).value, status, metode,
       items: items.map(it => ({ id: it.id, qty: num(it.qty), harga: num(it.harga), hpp: it.hpp }))
     });
