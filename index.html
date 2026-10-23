@@ -1050,8 +1050,7 @@ async function pageBeli() {
     ${field('Catatan (opsional)', '<input class="input" id="ct" placeholder="Contoh: bayar tunai">')}
     <div class="sumbar"><div><span class="lbl">Total belanja</span><strong class="num" id="tot">Rp 0</strong></div>
       <button class="btn primary" id="save">Simpan pembelian</button></div>
-  </section>`}
-  <h2 class="sec">Pembelian bulan ini</h2><div id="hist"><div class="skel"></div></div>`;
+  </section>`}`;
 
   if (state.bahan.length) {
     const w = makeRows($('#rows'), $('#tot'), { withPrice: true });
@@ -1063,8 +1062,6 @@ async function pageBeli() {
       pageBeli();
     });
   }
-  const rows = await api('list', { sheet: 'Pembelian', from: monthStart(), to: todayStr() });
-  const hb = $('#hist'); if (hb) hb.innerHTML = txList(rows.slice(0, 15), 'Pembelian');
 }
 
 /* ======================= PRODUKSI ======================= */
