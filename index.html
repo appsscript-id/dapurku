@@ -165,7 +165,11 @@ textarea.input{min-height:70px;resize:vertical}
 @media(min-width:900px){.stat.hero{grid-column:span 2}}
 .dgrid{display:grid;gap:16px;margin-top:16px}
 @media(min-width:900px){.dgrid{grid-template-columns:3fr 2fr}}
-.bars{display:flex;align-items:flex-end;gap:10px;height:170px;margin-top:14px}
+.bars{--bf:.78;display:flex;align-items:flex-end;gap:10px;height:170px;margin-top:14px}
+@media(max-width:640px){
+  .bars{--bf:.5;gap:6px;height:210px}
+  .bcol .bv{writing-mode:vertical-rl;transform:rotate(180deg)}
+}
 .bcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;min-width:0}
 .bcol .b{width:100%;max-width:44px;border-radius:8px 8px 3px 3px;background:var(--brand-50);min-height:4px;position:relative}
 .bcol.today .b{background:var(--brand)}
@@ -206,7 +210,7 @@ textarea.input{min-height:70px;resize:vertical}
 
 /* ======================= FORM ITEM ======================= */
 .irow{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:12px;border:1.5px solid var(--line);border-radius:14px;margin-bottom:10px;align-items:center}
-.irow .select{grid-column:1/-1}
+.irow .select[data-k="id"]{grid-column:1/-1}
 .irow .cost{padding:0 4px}
 .irow .hint,.irow .isub{grid-column:1/-1}
 .irow .isub{font-weight:800;text-align:right}
@@ -440,6 +444,46 @@ document.addEventListener('input', e => {
     const d = t.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
     t.value = d ? sep(d) : '';
   }
+}, true);
+
+/* ---- Harga per satuan: 2 angka di belakang koma ("12.500,50") ---- */
+const MONEY2 = 'type="text" inputmode="decimal" autocomplete="off"';
+/* Rapikan ketikan: titik ribuan otomatis, koma desimal maksimal 2 digit. Titik di akhir ketikan dianggap koma. */
+const fixMoney2 = raw => {
+  let s = String(raw ?? '').replace(/[^\d.,]/g, '');
+  if (!s.includes(',') && s.endsWith('.')) s = s.slice(0, -1) + ',';
+  const k = s.indexOf(',');
+  let ip = s, dp = null;
+  if (k >= 0) { ip = s.slice(0, k); dp = s.slice(k + 1).replace(/\D/g, '').slice(0, 2); }
+  ip = ip.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  return (ip ? sep(ip) : (dp !== null ? '0' : '')) + (dp !== null ? ',' + dp : '');
+};
+/* Baca nilai dari input berformat ("12.500,50" -> 12500.5) */
+const numM2 = v => {
+  if (typeof v === 'number') return Math.round(v * 100) / 100 || 0;
+  const n = Number(String(v ?? '').replace(/\./g, '').replace(',', '.'));
+  return isFinite(n) ? Math.round(n * 100) / 100 : 0;
+};
+/* Tampilkan nilai di dalam input dengan tepat 2 desimal ("12500,5" -> "12.500,50"; kosong jika 0) */
+const fm2 = v => {
+  const n = numM2(v); if (!n) return '';
+  const p = n.toFixed(2).split('.');
+  return sep(p[0]) + ',' + p[1];
+};
+/* Tampilkan harga per satuan dengan 2 desimal: Rp 12.500,00 */
+const rp2 = n => {
+  const v = Math.round((Number(n) || 0) * 100) / 100;
+  const p = Math.abs(v).toFixed(2).split('.');
+  return (v < 0 ? '-' : '') + 'Rp ' + sep(p[0]) + ',' + p[1];
+};
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t && t.classList && t.classList.contains('money2')) t.value = fixMoney2(t.value);
+}, true);
+/* Saat selesai mengetik, lengkapi menjadi 2 angka di belakang koma */
+document.addEventListener('focusout', e => {
+  const t = e.target;
+  if (t && t.classList && t.classList.contains('money2') && t.value) t.value = fm2(t.value);
 }, true);
 
 const pad = n => String(n).padStart(2, '0');
@@ -825,7 +869,7 @@ async function pageDashboard() {
   const d = await api('dashboard');
   const max = Math.max(...d.chart.map(c => c.omzet), 1);
   const dayName = t => new Date(t + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short' });
-  const short = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '').replace('.', ',') + ' jt' : n >= 1e3 ? Math.round(n / 1e3) + ' rb' : (n ? String(n) : '');
+  const short = n => n ? sep(Math.round(n)) : '';   /* angka penuh, tanpa singkatan rb/jt */
   v.innerHTML = `
     <div class="ph"><div><h1>Beranda</h1><p>Ringkasan usaha hari ini dan bulan berjalan.</p></div></div>
     <div class="stats">
@@ -839,7 +883,7 @@ async function pageDashboard() {
         <div class="bars">${d.chart.map((c, i) => `
           <div class="bcol ${i === d.chart.length - 1 ? 'today' : ''}" title="${rp(c.omzet)}">
             <span class="bv num">${short(c.omzet)}</span>
-            <div class="b" style="height:${Math.max(c.omzet / max * 100 * .78, 2)}%"></div>
+            <div class="b" style="height:calc(${(c.omzet / max * 100).toFixed(1)}% * var(--bf))"></div>
             <span class="bl">${dayName(c.tgl)}</span></div>`).join('')}</div></section>
       <section class="panel"><h2>Menu terlaris (30 hari)</h2>
         ${d.top.length ? d.top.map(t => `<div class="lrow"><div class="t">${esc(t.nama)}</div><div class="r num">${nf(t.qty)} terjual</div></div>`).join('')
@@ -960,11 +1004,14 @@ function checkout() {
 /* Konversi satuan beli. Format: [nama, pembilang, penyebut] -> 1 satuan ini = pembilang/penyebut satuan dasar bahan.
    Contoh: bahan dalam kg, 1 ons = 1/10 kg, 1 gram = 1/1000 kg. */
 const CONV = {
-  kg: [['ons', 1, 10], ['gram', 1, 1000]],
-  gram: [['kg', 1000, 1]],
+  kg: [['gram', 1, 1000], ['ons', 1, 10]],
+  gram: [['kg', 1000, 1], ['ons', 100, 1]],
+  ons: [['kg', 10, 1], ['gram', 1, 100]],
   liter: [['ml', 1, 1000]],
   ml: [['liter', 1000, 1]]
 };
+/* Daftar satuan bahan (dipakai di form Tambah/Ubah bahan) */
+const SATUAN = ['kg', 'gram', 'ons', 'liter', 'ml', 'pcs', 'butir'];
 function makeRows(root, totalEl, { withPrice, onChange }) {
   const blank = () => ({ id: '', qty: '', harga: '', unit: '', auto: false });
   let rows = [blank()];
@@ -974,10 +1021,10 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
   const convText = r => {
     const b = find(r.id), u = ratio(r);
     if (!withPrice || !b || u[1] === u[2] || !(num(r.qty) > 0)) return '';
-    const h = numM(r.harga);
-    return 'Masuk stok: ' + nf(num(r.qty) * u[1] / u[2]) + ' ' + b.Satuan + (h ? ', setara ' + rp(h * u[2] / u[1]) + ' per ' + b.Satuan : '');
+    const h = numM2(r.harga);
+    return 'Masuk stok: ' + nf(num(r.qty) * u[1] / u[2]) + ' ' + b.Satuan + (h ? ', setara ' + rp2(h * u[2] / u[1]) + ' per ' + b.Satuan : '');
   };
-  const price = r => withPrice ? numM(r.harga) : (find(r.id) ? find(r.id).HargaRata : 0);
+  const price = r => withPrice ? numM2(r.harga) : (find(r.id) ? find(r.id).HargaRata : 0);
   const subOf = r => num(r.qty) * price(r);
   const total = () => rows.reduce((s, r) => s + subOf(r), 0);
   const totals = () => { if (totalEl) totalEl.textContent = rp(total()); if (onChange) onChange(total()); };
@@ -992,8 +1039,8 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
         ${withPrice
           ? `<select class="select" data-k="unit" aria-label="Satuan beli" ${unitsOf(b).length < 2 ? 'disabled' : ''}>${unitsOf(b).map(u => `<option value="${esc(u[0])}" ${u[0] === r.unit ? 'selected' : ''}>${esc(u[0])}</option>`).join('') || '<option>satuan</option>'}</select>
         <button type="button" class="icon-btn danger" data-del aria-label="Hapus baris">${icon('trash')}</button>
-        <input class="input money" data-k="harga" style="grid-column:1/-1" ${MONEY} placeholder="Harga per ${esc(r.unit || (b ? b.Satuan : 'satuan'))}" value="${fm(r.harga)}" aria-label="Harga per satuan beli">`
-          : `<div class="muted small cost">${b ? 'Harga rata-rata ' + rp(b.HargaRata) : ''}</div>
+        <input class="input money2" data-k="harga" style="grid-column:1/-1" ${MONEY2} placeholder="Harga per ${esc(r.unit || (b ? b.Satuan : 'satuan'))} (0,00)" value="${fm2(r.harga)}" aria-label="Harga per satuan beli">`
+          : `<div class="muted small cost">${b ? 'Harga rata-rata ' + rp2(b.HargaRata) : ''}</div>
         <button type="button" class="icon-btn danger" data-del aria-label="Hapus baris">${icon('trash')}</button>`}
         <div class="hint">${b ? `Stok saat ini ${nf(b.Stok)} ${esc(b.Satuan)}` : ''}</div>
         ${withPrice ? `<div class="hint" data-conv>${esc(convText(r))}</div>` : ''}
@@ -1017,12 +1064,12 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
     if (k === 'unit') {
       r.unit = e.target.value;
       const b = find(r.id), u = ratio(r);
-      if (withPrice && b && r.auto) r.harga = Math.round((b.HargaRata || 0) * u[1] / u[2]) || '';
+      if (withPrice && b && r.auto) r.harga = Math.round((b.HargaRata || 0) * u[1] / u[2] * 100) / 100 || '';
     } else {
       r.id = e.target.value;
       const b = find(r.id);
       r.unit = b ? b.Satuan : '';
-      if (withPrice && b && (!numM(r.harga) || r.auto)) { r.harga = b.HargaRata || ''; r.auto = true; }
+      if (withPrice && b && (!numM2(r.harga) || r.auto)) { r.harga = b.HargaRata || ''; r.auto = true; }
     }
     draw();
   });
@@ -1040,7 +1087,7 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
       const r6 = x => Math.round(x * 1e6) / 1e6;
       const out = rows.filter(r => r.id && num(r.qty) > 0).map(r => {
         const u = ratio(r);
-        return { id: r.id, qty: r6(num(r.qty) * u[1] / u[2]), harga: r6(numM(r.harga) * u[2] / u[1]) };
+        return { id: r.id, qty: r6(num(r.qty) * u[1] / u[2]), harga: r6(numM2(r.harga) * u[2] / u[1]) };
       });
       if (rows.some(r => (r.id && !(num(r.qty) > 0)) || (!r.id && num(r.qty) > 0))) throw new Error('Lengkapi bahan dan jumlah pada setiap baris');
       return out;
@@ -1056,7 +1103,7 @@ function txList(rows, kind) {
     const who = kind === 'Penjualan' ? (r.Pelanggan || 'Pelanggan umum') : kind === 'Pembelian' ? (r.Supplier || 'Tanpa supplier') : r.Produk;
     const amt = kind === 'Produksi' ? nf(r.Qty) + ' porsi' : rp(r.Total);
     const line = it => kind === 'Produksi' || kind === 'Pembelian'
-      ? `<tr><td>${esc(it.nama)}<div class="small muted">${nf(it.qty)} ${esc(it.satuan || '')}${kind === 'Pembelian' ? ' x ' + rp(it.harga) : ''}</div></td><td class="num">${rp(it.sub)}</td></tr>`
+      ? `<tr><td>${esc(it.nama)}<div class="small muted">${nf(it.qty)} ${esc(it.satuan || '')}${kind === 'Pembelian' ? ' x ' + rp2(it.harga) : ''}</div></td><td class="num">${rp(it.sub)}</td></tr>`
       : `<tr><td>${esc(it.nama)}<div class="small muted">${nf(it.qty)} x ${rp(it.harga)}</div></td><td class="num">${rp(it.sub)}</td></tr>`;
     return `<details class="tx"><summary>
       <div><div class="who">${esc(who)}${kind === 'Penjualan' ? (r.Status === 'Belum Lunas' ? '<span class="badge warn">Belum lunas</span>' : '<span class="badge ok">Lunas</span>') : ''}</div><div class="when">${fmtTgl(r.Tanggal)}${kind === 'Penjualan' ? ' - ' + esc(r.Metode) : ''}</div></div>
@@ -1197,7 +1244,7 @@ async function pageStok() {
     list.innerHTML = state.bahan.length ? state.bahan.map(b => {
       const low = b.StokMin > 0 && b.Stok <= b.StokMin;
       return `<div class="mcard"><div class="body"><div class="nm">${esc(b.Nama)}</div>
-        <div class="meta">Stok <b class="num">${nf(b.Stok)} ${esc(b.Satuan)}</b>, rata-rata ${rp(b.HargaRata)} per ${esc(b.Satuan)}</div>
+        <div class="meta">Stok <b class="num">${nf(b.Stok)} ${esc(b.Satuan)}</b>, rata-rata ${rp2(b.HargaRata)} per ${esc(b.Satuan)}</div>
         ${low ? '<div style="margin-top:6px"><span class="badge warn">Perlu belanja</span></div>' : ''}</div>${acts(b.ID, b.Nama)}</div>`;
     }).join('') : '<div class="panel empty" style="grid-column:1/-1"><strong>Belum ada bahan</strong>Tambahkan bahan seperti beras, ayam, atau minyak goreng.</div>';
   } else {
@@ -1272,16 +1319,18 @@ async function showCust(id) {
 }
 
 function formBahan(b) {
+  /* Bahan lama dengan satuan di luar daftar (mis. "pack") tetap tampil agar tidak berubah diam-diam */
+  const units = b && b.Satuan && !SATUAN.includes(b.Satuan) ? [b.Satuan, ...SATUAN] : SATUAN;
+  const curU = b && b.Satuan ? b.Satuan : 'kg';
   const { ov, close } = modal(b ? 'Ubah bahan' : 'Tambah bahan', `
     ${field('Nama bahan', `<input class="input" id="n" value="${esc(b?.Nama)}" placeholder="Contoh: Beras">`)}
-    <div class="two">${field('Satuan', `<input class="input" id="s" list="sat" value="${esc(b?.Satuan)}" placeholder="kg">
-        <datalist id="sat">${['kg', 'gram', 'liter', 'ml', 'pcs', 'butir', 'pack', 'ikat'].map(x => `<option>${x}</option>`).join('')}</datalist>`)}
+    <div class="two">${field('Satuan', `<select class="select" id="s">${units.map(x => `<option value="${esc(x)}" ${x === curU ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`)}
       ${field('Stok saat ini', `<input class="input" id="st" type="number" inputmode="decimal" step="any" min="0" value="${b ? b.Stok : ''}" placeholder="0">`, b ? 'Ubah hanya untuk koreksi hasil stok opname.' : '')}</div>
-    <div class="two">${field('Harga per satuan (Rp)', `<input class="input money" id="h" ${MONEY} value="${b ? fm(b.HargaRata) : ''}" placeholder="0">`)}
+    <div class="two">${field('Harga per satuan (Rp)', `<input class="input money2" id="h" ${MONEY2} value="${b ? fm2(b.HargaRata) : ''}" placeholder="0,00">`)}
       ${field('Batas stok minimum', `<input class="input" id="m" type="number" inputmode="decimal" step="any" min="0" value="${b ? b.StokMin : ''}" placeholder="0">`, 'Muncul peringatan jika stok di bawah angka ini.')}</div>
     <div class="sheet-f"><button class="btn ghost" data-close>Batal</button><button class="btn primary" id="ok">Simpan</button></div>`);
   $('#ok', ov).onclick = ev => guard(ev.currentTarget, async () => {
-    await api('saveBahan', { id: b?.ID, nama: $('#n', ov).value, satuan: $('#s', ov).value, stok: $('#st', ov).value, harga: numM($('#h', ov).value), stokMin: $('#m', ov).value });
+    await api('saveBahan', { id: b?.ID, nama: $('#n', ov).value, satuan: $('#s', ov).value, stok: $('#st', ov).value, harga: numM2($('#h', ov).value), stokMin: $('#m', ov).value });
     close(); await loadMaster(); toast('Bahan tersimpan'); pageStok();
   });
 }
