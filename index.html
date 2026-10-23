@@ -1008,7 +1008,9 @@ const CONV = {
   gram: [['kg', 1000, 1], ['ons', 100, 1]],
   ons: [['kg', 10, 1], ['gram', 1, 100]],
   liter: [['ml', 1, 1000]],
-  ml: [['liter', 1000, 1]]
+  ml: [['liter', 1000, 1]],
+  pcs: [['butir', 1, 1]],
+  butir: [['pcs', 1, 1]]
 };
 /* Daftar satuan bahan (dipakai di form Tambah/Ubah bahan) */
 const SATUAN = ['kg', 'gram', 'ons', 'liter', 'ml', 'pcs', 'butir'];
@@ -1037,7 +1039,11 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
           ${state.bahan.map(x => `<option value="${x.ID}" ${x.ID === r.id ? 'selected' : ''}>${esc(x.Nama)} (${esc(x.Satuan)})</option>`).join('')}</select>
         <input class="input" data-k="qty" type="number" inputmode="decimal" min="0" step="any" placeholder="Jumlah" value="${esc(r.qty)}" aria-label="Jumlah">
         ${withPrice
-          ? `<select class="select" data-k="unit" aria-label="Satuan beli" ${unitsOf(b).length < 2 ? 'disabled' : ''}>${unitsOf(b).map(u => `<option value="${esc(u[0])}" ${u[0] === r.unit ? 'selected' : ''}>${esc(u[0])}</option>`).join('') || '<option>satuan</option>'}</select>
+          ? `<select class="select" data-k="unit" aria-label="Satuan beli" ${b ? '' : 'disabled'}>${(() => {
+              const ok = unitsOf(b).map(u => u[0]);
+              const all = [...new Set([...SATUAN, ...ok])];
+              return all.map(x => `<option value="${esc(x)}" ${x === r.unit ? 'selected' : ''} ${b && !ok.includes(x) ? 'disabled' : ''}>${esc(x)}${b && !ok.includes(x) ? ' (tidak sesuai)' : ''}</option>`).join('');
+            })()}</select>
         <button type="button" class="icon-btn danger" data-del aria-label="Hapus baris">${icon('trash')}</button>
         <input class="input money2" data-k="harga" style="grid-column:1/-1" ${MONEY2} placeholder="Harga per ${esc(r.unit || (b ? b.Satuan : 'satuan'))} (0,00)" value="${fm2(r.harga)}" aria-label="Harga per satuan beli">`
           : `<div class="muted small cost">${b ? 'Harga rata-rata ' + rp2(b.HargaRata) : ''}</div>
