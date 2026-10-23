@@ -210,6 +210,8 @@ textarea.input{min-height:70px;resize:vertical}
 .irow .cost{padding:0 4px}
 .irow .hint,.irow .isub{grid-column:1/-1}
 .irow .isub{font-weight:800;text-align:right}
+.irow .hint:empty{display:none}
+.irow .select:disabled{opacity:1;color:var(--ink-2);background-image:none;padding-right:12px}
 .sumbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:6px;padding-top:16px;border-top:1.5px dashed var(--line)}
 .sumbar .lbl{font-size:calc(13px*var(--s));color:var(--muted);font-weight:600}
 .sumbar strong{display:block;font-size:calc(24px*var(--s));font-weight:800;letter-spacing:-.02em}
@@ -955,10 +957,26 @@ function checkout() {
 }
 
 /* ======================= WIDGET BARIS ITEM ======================= */
+/* Konversi satuan beli. Format: [nama, pembilang, penyebut] -> 1 satuan ini = pembilang/penyebut satuan dasar bahan.
+   Contoh: bahan dalam kg, 1 ons = 1/10 kg, 1 gram = 1/1000 kg. */
+const CONV = {
+  kg: [['ons', 1, 10], ['gram', 1, 1000]],
+  gram: [['kg', 1000, 1]],
+  liter: [['ml', 1, 1000]],
+  ml: [['liter', 1000, 1]]
+};
 function makeRows(root, totalEl, { withPrice, onChange }) {
-  const blank = () => ({ id: '', qty: '', harga: '' });
+  const blank = () => ({ id: '', qty: '', harga: '', unit: '', auto: false });
   let rows = [blank()];
   const find = id => state.bahan.find(b => b.ID === id);
+  const unitsOf = b => b ? [[b.Satuan, 1, 1], ...(CONV[normN(b.Satuan)] || [])] : [];
+  const ratio = r => unitsOf(find(r.id)).find(u => u[0] === r.unit) || [null, 1, 1];
+  const convText = r => {
+    const b = find(r.id), u = ratio(r);
+    if (!withPrice || !b || u[1] === u[2] || !(num(r.qty) > 0)) return '';
+    const h = numM(r.harga);
+    return 'Masuk stok: ' + nf(num(r.qty) * u[1] / u[2]) + ' ' + b.Satuan + (h ? ', setara ' + rp(h * u[2] / u[1]) + ' per ' + b.Satuan : '');
+  };
   const price = r => withPrice ? numM(r.harga) : (find(r.id) ? find(r.id).HargaRata : 0);
   const subOf = r => num(r.qty) * price(r);
   const total = () => rows.reduce((s, r) => s + subOf(r), 0);
@@ -972,24 +990,40 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
           ${state.bahan.map(x => `<option value="${x.ID}" ${x.ID === r.id ? 'selected' : ''}>${esc(x.Nama)} (${esc(x.Satuan)})</option>`).join('')}</select>
         <input class="input" data-k="qty" type="number" inputmode="decimal" min="0" step="any" placeholder="Jumlah" value="${esc(r.qty)}" aria-label="Jumlah">
         ${withPrice
-          ? `<input class="input money" data-k="harga" ${MONEY} placeholder="Harga per ${b ? esc(b.Satuan) : 'satuan'}" value="${fm(r.harga)}" aria-label="Harga satuan">`
-          : `<div class="muted small cost">${b ? 'Harga rata-rata ' + rp(b.HargaRata) : ''}</div>`}
+          ? `<select class="select" data-k="unit" aria-label="Satuan beli" ${unitsOf(b).length < 2 ? 'disabled' : ''}>${unitsOf(b).map(u => `<option value="${esc(u[0])}" ${u[0] === r.unit ? 'selected' : ''}>${esc(u[0])}</option>`).join('') || '<option>satuan</option>'}</select>
         <button type="button" class="icon-btn danger" data-del aria-label="Hapus baris">${icon('trash')}</button>
+        <input class="input money" data-k="harga" style="grid-column:1/-1" ${MONEY} placeholder="Harga per ${esc(r.unit || (b ? b.Satuan : 'satuan'))}" value="${fm(r.harga)}" aria-label="Harga per satuan beli">`
+          : `<div class="muted small cost">${b ? 'Harga rata-rata ' + rp(b.HargaRata) : ''}</div>
+        <button type="button" class="icon-btn danger" data-del aria-label="Hapus baris">${icon('trash')}</button>`}
         <div class="hint">${b ? `Stok saat ini ${nf(b.Stok)} ${esc(b.Satuan)}` : ''}</div>
+        ${withPrice ? `<div class="hint" data-conv>${esc(convText(r))}</div>` : ''}
         <div class="isub num" data-sub>${rp(subOf(r))}</div></div>`;
     }).join('');
     totals();
   }
   root.addEventListener('input', e => {
     const row = e.target.closest('.irow'), k = e.target.dataset.k;
-    if (!row || !k || k === 'id') return;
+    if (!row || !k || k === 'id' || k === 'unit') return;
     const r = rows[+row.dataset.i]; r[k] = e.target.value;
-    row.querySelector('[data-sub]').textContent = rp(subOf(r)); totals();
+    if (k === 'harga') r.auto = false;
+    row.querySelector('[data-sub]').textContent = rp(subOf(r));
+    const cv = row.querySelector('[data-conv]'); if (cv) cv.textContent = convText(r);
+    totals();
   });
   root.addEventListener('change', e => {
-    const row = e.target.closest('.irow'); if (!row || e.target.dataset.k !== 'id') return;
-    const r = rows[+row.dataset.i]; r.id = e.target.value;
-    const b = find(r.id); if (withPrice && b && !numM(r.harga)) r.harga = b.HargaRata || '';
+    const row = e.target.closest('.irow'), k = e.target.dataset.k;
+    if (!row || (k !== 'id' && k !== 'unit')) return;
+    const r = rows[+row.dataset.i];
+    if (k === 'unit') {
+      r.unit = e.target.value;
+      const b = find(r.id), u = ratio(r);
+      if (withPrice && b && r.auto) r.harga = Math.round((b.HargaRata || 0) * u[1] / u[2]) || '';
+    } else {
+      r.id = e.target.value;
+      const b = find(r.id);
+      r.unit = b ? b.Satuan : '';
+      if (withPrice && b && (!numM(r.harga) || r.auto)) { r.harga = b.HargaRata || ''; r.auto = true; }
+    }
     draw();
   });
   root.addEventListener('click', e => {
@@ -1002,7 +1036,12 @@ function makeRows(root, totalEl, { withPrice, onChange }) {
     reset() { rows = [blank()]; draw(); },
     total,
     get() {
-      const out = rows.filter(r => r.id && num(r.qty) > 0).map(r => ({ id: r.id, qty: num(r.qty), harga: numM(r.harga) }));
+      /* Jumlah dan harga dikonversi ke satuan dasar bahan (mis. 500 gram -> 0,5 kg) sebelum dikirim */
+      const r6 = x => Math.round(x * 1e6) / 1e6;
+      const out = rows.filter(r => r.id && num(r.qty) > 0).map(r => {
+        const u = ratio(r);
+        return { id: r.id, qty: r6(num(r.qty) * u[1] / u[2]), harga: r6(numM(r.harga) * u[2] / u[1]) };
+      });
       if (rows.some(r => (r.id && !(num(r.qty) > 0)) || (!r.id && num(r.qty) > 0))) throw new Error('Lengkapi bahan dan jumlah pada setiap baris');
       return out;
     }
@@ -1030,7 +1069,8 @@ function txList(rows, kind) {
       ${kind === 'Penjualan' ? `<div class="acts-row">
         ${r.Status === 'Belum Lunas' ? `<button class="btn sm primary" data-act="pay" data-id="${esc(r.ID)}">Tandai lunas</button>` : ''}
         <button class="btn sm ghost" data-act="edit" data-id="${esc(r.ID)}">${icon('edit')}Ubah</button>
-        <button class="btn sm danger" data-act="del" data-id="${esc(r.ID)}">${icon('trash')}Hapus</button></div>` : ''}
+        <button class="btn sm danger" data-act="del" data-id="${esc(r.ID)}">${icon('trash')}Hapus</button></div>`
+        : `<div class="acts-row"><button class="btn sm danger" data-act="del" data-id="${esc(r.ID)}">${icon('trash')}Hapus</button></div>`}
       </div></details>`;
   }).join('');
 }
@@ -1081,8 +1121,7 @@ async function pageProduksi() {
     ${field('Catatan (opsional)', '<input class="input" id="ct">')}
     <div class="sumbar"><div><span class="lbl">Biaya bahan</span><strong class="num" id="tot">Rp 0</strong><span class="hint" id="hpp"></span></div>
       <button class="btn primary" id="save">Simpan produksi</button></div>
-  </section>`}
-  <h2 class="sec">Produksi bulan ini</h2><div id="hist"><div class="skel"></div></div>`;
+  </section>`}`;
 
   if (ready) {
     let w = null;
@@ -1101,8 +1140,6 @@ async function pageProduksi() {
       pageProduksi();
     });
   }
-  const rows = await api('list', { sheet: 'Produksi', from: monthStart(), to: todayStr() });
-  const hp = $('#hist'); if (hp) hp.innerHTML = txList(rows.slice(0, 15), 'Produksi');
 }
 
 /* ======================= PELANGGAN (menu sidebar) ======================= */
@@ -1330,8 +1367,16 @@ async function pageLaporan() {
     if (b.dataset.act === 'edit') return editSale(r);
     if (b.dataset.act === 'pay') return paySale(r);
     if (b.dataset.act === 'del') {
-      const ok = await ask('Hapus penjualan?', `Penjualan ${r.Pelanggan ? 'untuk ' + r.Pelanggan + ' ' : ''}senilai ${rp(r.Total)} akan dihapus dan stok produk dikembalikan.`);
-      if (ok) guard(null, async () => { await api('deleteSale', { id: r.ID }); await loadMaster(); toast('Penjualan dihapus, stok dikembalikan'); pageLaporan(); });
+      if (lap.sheet === 'Pembelian') {
+        const ok = await ask('Hapus pembelian?', `Pembelian senilai ${rp(r.Total)} akan dihapus dan stok bahan dikurangi sesuai isi pembelian ini (tidak kurang dari 0). Harga rata-rata bahan tidak diubah.`);
+        if (ok) guard(null, async () => { await api('deleteBuy', { id: r.ID }); await loadMaster(); toast('Pembelian dihapus, stok bahan disesuaikan'); pageLaporan(); });
+      } else if (lap.sheet === 'Produksi') {
+        const ok = await ask('Hapus produksi?', `Produksi ${r.Produk} (${nf(r.Qty)} porsi) akan dihapus. Stok bahan dikembalikan dan stok produk dikurangi (tidak kurang dari 0). HPP produk tidak diubah.`);
+        if (ok) guard(null, async () => { await api('deleteProduction', { id: r.ID }); await loadMaster(); toast('Produksi dihapus, stok disesuaikan'); pageLaporan(); });
+      } else {
+        const ok = await ask('Hapus penjualan?', `Penjualan ${r.Pelanggan ? 'untuk ' + r.Pelanggan + ' ' : ''}senilai ${rp(r.Total)} akan dihapus dan stok produk dikembalikan.`);
+        if (ok) guard(null, async () => { await api('deleteSale', { id: r.ID }); await loadMaster(); toast('Penjualan dihapus, stok dikembalikan'); pageLaporan(); });
+      }
     }
   };
 
